@@ -6,8 +6,8 @@
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f7f6f3",
-  "theme_color": "#b95b38",
+  "background_color": "#f8f7f4",
+  "theme_color": "#c45c32",
   "lang": "en",
   "dir": "ltr",
   "icons": [
@@ -36,9 +36,6 @@
       "purpose": "maskable"
     }
   ],
-  "categories": [
-    "productivity",
-    "utilities"
-  ],
+  "categories": ["productivity", "utilities"],
   "prefer_related_applications": false
 }

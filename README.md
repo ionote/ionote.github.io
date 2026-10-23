@@ -20,9 +20,6 @@ Notes are stored in this browser on this device. Without encryption they are sto
 ## Install on Android
 In Chrome, open the menu and choose **Install and create shortcut**, then tap **Install**. Choosing **Create shortcut** makes a browser shortcut rather than a full app.
 
-## Upgrading from the PIN version
-This version has no PIN. Notes locked with the old PIN cannot be opened here. Turn the lock off in the old version before updating, or the app will offer to erase them.
-
 ## Local test
 ```
 python -m http.server 8080
