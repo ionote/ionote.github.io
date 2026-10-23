@@ -6,8 +6,8 @@
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#FAFAF8",
-  "theme_color": "#FAFAF8",
+  "background_color": "#F8F8FA",
+  "theme_color": "#F8F8FA",
   "lang": "en",
   "dir": "ltr",
   "icons": [

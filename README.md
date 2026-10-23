@@ -10,7 +10,7 @@ Live: https://ionote.github.io
 - Optional encryption with a passphrase (AES-256-GCM, PBKDF2-SHA256 600,000 iterations)
 - Auto-lock when the app is left for a chosen time
 - Encrypted backups saved as a file, import merges notes
-- Pin, search, undo delete, light, dark and system themes
+- Pin, undo delete, light, dark and system themes
 - No account, no server, no analytics, no external requests
 
 ## Privacy model

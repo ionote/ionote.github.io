@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
-<meta name="theme-color" content="#FAFAF8" id="metaTheme">
+<meta name="theme-color" content="#F8F8FA" id="metaTheme">
 <meta name="color-scheme" content="light dark">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,15 +21,15 @@ try{var s=JSON.parse(localStorage.getItem("notes_settings_v3")||"{}");var d=s.th
 </script>
 <style>
 :root{
-  --bg:#FAFAF8;--surface:#fff;--fg:#18181B;--mut:#8A8A93;--line:#ECEAE5;--track:#D9D7D1;--seg:#fff;
-  --acc:#FF6A00;--on-acc:#1A1205;--danger:#D92D20;
+  --bg:#F8F8FA;--surface:#fff;--fg:#15151A;--mut:#8B8B96;--line:#E8E8ED;--track:#D4D4DC;--seg:#fff;
+  --acc:#4F46E5;--on-acc:#fff;--danger:#D92D20;
   --st:max(env(safe-area-inset-top,0px),var(--safe-area-inset-top,0px));
   --sb:max(env(safe-area-inset-bottom,0px),var(--safe-area-inset-bottom,0px));
   --sl:max(env(safe-area-inset-left,0px),var(--safe-area-inset-left,0px));
   --sr:max(env(safe-area-inset-right,0px),var(--safe-area-inset-right,0px));
   color-scheme:light
 }
-[data-theme=dark]{--bg:#0E0E10;--surface:#18181B;--fg:#F4F4F5;--mut:#8E8E98;--line:#26262B;--track:#3A3A42;--seg:#3A3A42;--acc:#FF7A1F;--danger:#F97066;color-scheme:dark}
+[data-theme=dark]{--bg:#0D0D11;--surface:#17171C;--fg:#F4F4F6;--mut:#8C8C98;--line:#25252C;--track:#3A3A44;--seg:#3A3A44;--acc:#8B90FF;--on-acc:#0D0D11;--danger:#F97066;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 html{background:var(--bg)}
@@ -42,18 +42,10 @@ input,textarea{background:none;border:0;outline:0;width:100%}
 .ib{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;transition:background .15s}
 .ib:active{background:var(--line)}
 
-#top{position:sticky;top:0;z-index:10;max-width:680px;margin:0 auto;padding:calc(var(--st) + 10px) 16px 12px;background:var(--bg);border-bottom:1px solid transparent;transition:border-color .2s}
-#top.scrolled{border-color:var(--line)}
-.bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.025em}
-.actions{display:flex;gap:2px;margin-right:-8px}
-.search{display:flex;align-items:center;gap:10px;height:46px;padding:0 6px 0 14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;color:var(--mut);transition:border-color .15s}
-.search:focus-within{border-color:var(--acc)}
-.search input{flex:1;color:var(--fg);font-size:16px;-webkit-appearance:none;appearance:none}
-.search input::-webkit-search-cancel-button{display:none}
-.search .ib{width:36px;height:36px;border-radius:10px}
+#dock{position:fixed;left:calc(16px + var(--sl));bottom:calc(24px + var(--sb));z-index:20;display:flex;gap:8px}
+#dock .ib{width:50px;height:50px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
 
-#list{max-width:680px;margin:0 auto;padding:4px 16px calc(var(--sb) + 110px);display:grid;gap:10px}
+#list{max-width:680px;margin:0 auto;padding:calc(var(--st) + 20px) 16px calc(var(--sb) + 110px);display:grid;gap:10px}
 .note{display:block;width:100%;text-align:start;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;transition:transform .12s}
 .note:active{transform:scale(.985)}
 .nt{display:block;font-weight:600;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -80,10 +72,8 @@ h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.025em}
 ::placeholder{color:var(--mut);opacity:.7}
 
 .pbody{flex:1;overflow-y:auto;padding:8px 0 calc(var(--sb) + 32px)}
+.pbody>*+*{margin-top:14px}
 .pbar h2{margin:0 0 0 6px;font-size:20px;font-weight:700}
-.grp{margin-bottom:26px}
-.grp h3{margin:0 0 8px 4px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
-.grp p{margin:8px 4px 0;font-size:13px;color:var(--mut);line-height:1.45}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .row{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;min-height:54px;padding:14px 16px;text-align:start}
 .row+.row{border-top:1px solid var(--line)}
@@ -99,7 +89,6 @@ h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.025em}
 .toggle.on{background:var(--acc)}
 .toggle.on::after{transform:translateX(20px)}
 select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px}
-.foot{text-align:center;color:var(--mut);font-size:13px;margin:0}
 
 #lock{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:var(--bg)}
 #lock.show{display:flex}
@@ -135,30 +124,18 @@ select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px s
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
-  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 3 3v1H7v-1l3-3-1-6zM12 14v6"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></symbol>
-  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
   <symbol id="i-note" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4"/></symbol>
 </svg>
 
-<header id="top">
-  <div class="bar">
-    <h1>Notes</h1>
-    <div class="actions">
-      <button class="ib" id="btnLock" aria-label="Lock now" hidden><svg class="ic"><use href="#i-lock"/></svg></button>
-      <button class="ib" id="btnSettings" aria-label="Settings"><svg class="ic"><use href="#i-sliders"/></svg></button>
-    </div>
-  </div>
-  <label class="search">
-    <svg class="ic"><use href="#i-search"/></svg>
-    <input id="q" type="search" placeholder="Search" dir="auto" autocomplete="off" enterkeyhint="search" spellcheck="false" aria-label="Search notes">
-    <button class="ib" id="qClear" aria-label="Clear search" hidden><svg class="ic"><use href="#i-x"/></svg></button>
-  </label>
-</header>
-
 <main id="list"></main>
+
+<div id="dock">
+  <button class="ib" id="btnSettings" aria-label="Settings"><svg class="ic"><use href="#i-sliders"/></svg></button>
+  <button class="ib" id="btnLock" aria-label="Lock now" hidden><svg class="ic"><use href="#i-lock"/></svg></button>
+</div>
 
 <button id="add" aria-label="New note"><svg class="ic"><use href="#i-plus"/></svg></button>
 
@@ -182,55 +159,39 @@ select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px s
       <h2>Settings</h2>
     </div>
     <div class="pbody">
-      <div class="grp">
-        <h3>Appearance</h3>
-        <div class="seg" id="seg">
-          <button data-v="system">System</button>
-          <button data-v="light">Light</button>
-          <button data-v="dark">Dark</button>
+      <div class="seg" id="seg">
+        <button data-v="system">System</button>
+        <button data-v="light">Light</button>
+        <button data-v="dark">Dark</button>
+      </div>
+
+      <div class="card">
+        <button class="row" id="togLock" role="switch" aria-checked="false">
+          <span><b>Encryption</b><small>Locks notes with a passphrase. No recovery if you forget it.</small></span>
+          <span class="toggle"></span>
+        </button>
+        <div class="row" id="rowAuto" hidden>
+          <b>Auto-lock</b>
+          <select id="selAuto" aria-label="Auto-lock">
+            <option value="0">Immediately</option>
+            <option value="1">1 minute</option>
+            <option value="5">5 minutes</option>
+            <option value="30">30 minutes</option>
+          </select>
         </div>
+        <button class="row" id="btnChangePass" hidden><b>Change passphrase</b></button>
       </div>
 
-      <div class="grp">
-        <h3>Privacy</h3>
-        <div class="card">
-          <button class="row" id="togLock" role="switch" aria-checked="false">
-            <span><b>Encrypt notes</b><small>Protect notes with a passphrase. If you forget it, they can't be recovered.</small></span>
-            <span class="toggle"></span>
-          </button>
-          <div class="row" id="rowAuto" hidden>
-            <span><b>Lock when away</b></span>
-            <select id="selAuto" aria-label="Lock when away">
-              <option value="0">Immediately</option>
-              <option value="1">1 minute</option>
-              <option value="5">5 minutes</option>
-              <option value="30">30 minutes</option>
-            </select>
-          </div>
-          <button class="row" id="btnChangePass" hidden><b>Change passphrase</b></button>
-        </div>
-        <p>Without encryption, notes are stored on this device as plain text.</p>
+      <div class="card">
+        <button class="row" id="btnExport"><b>Save backup</b></button>
+        <button class="row" id="btnImport"><b>Restore backup</b></button>
       </div>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
 
-      <div class="grp">
-        <h3>Backup</h3>
-        <div class="card">
-          <button class="row" id="btnExport"><b>Save backup</b></button>
-          <button class="row" id="btnImport"><b>Import backup</b></button>
-        </div>
-        <input type="file" id="importFile" accept=".json,application/json" hidden>
-        <p>Backups are encrypted when encryption is on. Importing adds notes and never deletes any.</p>
+      <div class="card">
+        <button class="row" id="btnInstall"><b>Install app</b></button>
+        <button class="row danger" id="btnClearAll"><b>Delete all notes</b></button>
       </div>
-
-      <div class="grp" id="grpInstall">
-        <div class="card"><button class="row" id="btnInstall"><b>Install app</b></button></div>
-      </div>
-
-      <div class="grp">
-        <div class="card"><button class="row danger" id="btnClearAll"><b>Delete all notes</b></button></div>
-      </div>
-
-      <p class="foot">ioNote · Everything stays on this device</p>
     </div>
   </div>
 </section>
@@ -351,7 +312,6 @@ let toastTimer = null;
 
 const list = $("#list");
 const ed = $("#ed");
-const q = $("#q");
 
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -382,7 +342,7 @@ const mq = matchMedia("(prefers-color-scheme: dark)");
 function applyTheme() {
   const dark = settings.theme === "dark" || (settings.theme === "system" && mq.matches);
   document.documentElement.dataset.theme = dark ? "dark" : "light";
-  $("#metaTheme").content = dark ? "#0E0E10" : "#FAFAF8";
+  $("#metaTheme").content = dark ? "#0D0D11" : "#F8F8FA";
   document.querySelectorAll("#seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === settings.theme)));
 }
 mq.addEventListener("change", applyTheme);
@@ -416,14 +376,10 @@ async function loadNotes() {
 
 /* ── List ── */
 function render() {
-  const term = q.value.trim().toLowerCase();
-  $("#qClear").hidden = !q.value;
-  const items = notes
-    .filter(n => !term || (n.t + "\n" + n.b).toLowerCase().includes(term))
-    .sort((a, b) => (b.pinned - a.pinned) || (b.d - a.d));
+  const items = [...notes].sort((a, b) => (b.pinned - a.pinned) || (b.d - a.d));
 
   if (!items.length) {
-    list.innerHTML = `<div class="empty"><svg class="ic"><use href="#i-note"/></svg><b>${term ? "No results" : "No notes yet"}</b><span>${term ? "Try a different word" : "Tap + to write your first note"}</span></div>`;
+    list.innerHTML = `<div class="empty"><svg class="ic"><use href="#i-note"/></svg><b>No notes yet</b><span>Tap + to write your first note</span></div>`;
     return;
   }
   list.innerHTML = items.map(n => {
@@ -601,7 +557,6 @@ async function lockApp() {
   importData = null;
   $("#t").value = "";
   $("#b").value = "";
-  q.value = "";
   ed.classList.remove("open");
   $("#settings").classList.remove("open");
   $("#installGuide").classList.remove("show");
@@ -690,7 +645,7 @@ async function triggerInstall() {
 }
 
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredPrompt = e; });
-addEventListener("appinstalled", () => { deferredPrompt = null; $("#grpInstall").hidden = true; toast("App installed"); });
+addEventListener("appinstalled", () => { deferredPrompt = null; $("#btnInstall").hidden = true; toast("App installed"); });
 
 /* ── Events ── */
 $("#add").onclick = () => {
@@ -704,8 +659,6 @@ list.onclick = e => {
   const n = el && notes.find(x => x.id === el.dataset.id);
   if (n) openNote(n);
 };
-q.oninput = render;
-$("#qClear").onclick = () => { q.value = ""; render(); q.focus(); };
 
 $("#t").oninput = scheduleSave;
 $("#b").oninput = scheduleSave;
@@ -785,8 +738,6 @@ $("#btnClearAll").onclick = async () => {
   toast("All notes deleted");
 };
 
-addEventListener("scroll", () => $("#top").classList.toggle("scrolled", scrollY > 4), { passive: true });
-
 addEventListener("popstate", () => {
   if (ed.classList.contains("open")) closeNote();
   $("#settings").classList.remove("open");
@@ -814,7 +765,7 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catc
 (async () => {
   applyTheme();
   refreshSecurityUI();
-  $("#grpInstall").hidden = isStandalone();
+  $("#btnInstall").hidden = isStandalone();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
 
   if (settings.lockEnabled) {
