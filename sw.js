@@ -1,4 +1,4 @@
-const CACHE = "ionote-v4";
+const CACHE = "ionote-v5";
 const ASSETS = [
   "./",
   "./index.html",

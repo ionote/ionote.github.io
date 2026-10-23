@@ -44,6 +44,11 @@ input,textarea{background:none;border:0;outline:0;width:100%}
 
 #dock{position:fixed;left:calc(16px + var(--sl));bottom:calc(24px + var(--sb));z-index:20;display:flex;gap:8px}
 #dock .ib{width:50px;height:50px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+#sbar{position:fixed;left:calc(16px + var(--sl));right:calc(16px + var(--sr));bottom:calc(24px + var(--sb));z-index:30;max-width:680px;margin:0 auto;display:flex;align-items:center;gap:10px;height:54px;padding:0 6px 0 16px;background:var(--surface);border:1px solid var(--acc);border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+#sbar .ic{color:var(--mut)}
+#sbar input{flex:1;font-size:16px;-webkit-appearance:none;appearance:none}
+#sbar input::-webkit-search-cancel-button{display:none}
+#sbar .ib{width:40px;height:40px;border-radius:12px}
 
 #list{max-width:680px;margin:0 auto;padding:calc(var(--st) + 20px) 16px calc(var(--sb) + 110px);display:grid;gap:10px}
 .note{display:block;width:100%;text-align:start;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;transition:transform .12s}
@@ -123,6 +128,8 @@ select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px s
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 3 3v1H7v-1l3-3-1-6zM12 14v6"/></symbol>
@@ -134,7 +141,14 @@ select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px s
 
 <div id="dock">
   <button class="ib" id="btnSettings" aria-label="Settings"><svg class="ic"><use href="#i-sliders"/></svg></button>
+  <button class="ib" id="btnSearch" aria-label="Search" hidden><svg class="ic"><use href="#i-search"/></svg></button>
   <button class="ib" id="btnLock" aria-label="Lock now" hidden><svg class="ic"><use href="#i-lock"/></svg></button>
+</div>
+
+<div id="sbar" hidden>
+  <svg class="ic"><use href="#i-search"/></svg>
+  <input id="q" type="search" placeholder="Search notes" dir="auto" autocomplete="off" enterkeyhint="search" spellcheck="false" aria-label="Search notes">
+  <button class="ib" id="qClose" aria-label="Close search"><svg class="ic"><use href="#i-x"/></svg></button>
 </div>
 
 <button id="add" aria-label="New note"><svg class="ic"><use href="#i-plus"/></svg></button>
@@ -183,7 +197,7 @@ select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px s
       </div>
 
       <div class="card">
-        <button class="row" id="btnExport"><b>Save backup</b></button>
+        <button class="row" id="btnExport"><span><b>Save backup</b><small id="bkInfo"></small></span></button>
         <button class="row" id="btnImport"><b>Restore backup</b></button>
       </div>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
@@ -295,7 +309,7 @@ function saveRaw(key, data) {
 }
 
 let settings = {
-  theme: "system", autoLock: 5, lockEnabled: false, salt: null, iter: null, check: null, noticeSeen: false,
+  theme: "system", autoLock: 5, lastBackup: null, lockEnabled: false, salt: null, iter: null, check: null, noticeSeen: false,
   ...loadRaw(SETTINGS_KEY, {})
 };
 
@@ -312,6 +326,7 @@ let toastTimer = null;
 
 const list = $("#list");
 const ed = $("#ed");
+const q = $("#q");
 
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -376,10 +391,14 @@ async function loadNotes() {
 
 /* ── List ── */
 function render() {
-  const items = [...notes].sort((a, b) => (b.pinned - a.pinned) || (b.d - a.d));
+  const term = q.value.trim().toLowerCase();
+  $("#btnSearch").hidden = notes.length <= 8;
+  const items = notes
+    .filter(n => !term || (n.t + "\n" + n.b).toLowerCase().includes(term))
+    .sort((a, b) => (b.pinned - a.pinned) || (b.d - a.d));
 
   if (!items.length) {
-    list.innerHTML = `<div class="empty"><svg class="ic"><use href="#i-note"/></svg><b>No notes yet</b><span>Tap + to write your first note</span></div>`;
+    list.innerHTML = `<div class="empty"><svg class="ic"><use href="#i-note"/></svg><b>${term ? "No results" : "No notes yet"}</b><span>${term ? "Try a different word" : "Tap + to write your first note"}</span></div>`;
     return;
   }
   list.innerHTML = items.map(n => {
@@ -388,6 +407,18 @@ function render() {
     const preview = (n.t.trim() ? lines : lines.slice(1)).join(" ").trim().slice(0, 200);
     return `<button class="note" data-id="${esc(n.id)}"><span class="nt" dir="auto">${esc(title)}</span>${preview ? `<span class="np" dir="auto">${esc(preview)}</span>` : ""}<span class="nm">${n.pinned ? '<svg class="ic"><use href="#i-pin"/></svg>' : ""}<span>${fmtDate(n.d)}</span></span></button>`;
   }).join("");
+}
+
+function closeSearch() {
+  q.value = "";
+  $("#sbar").hidden = true;
+  render();
+}
+
+function refreshBackupInfo() {
+  $("#bkInfo").textContent = settings.lastBackup
+    ? "Last backup: " + new Date(settings.lastBackup).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+    : "Never backed up";
 }
 
 /* ── Editor ── */
@@ -555,6 +586,8 @@ async function lockApp() {
   notes = [];
   cur = null;
   importData = null;
+  q.value = "";
+  $("#sbar").hidden = true;
   $("#t").value = "";
   $("#b").value = "";
   ed.classList.remove("open");
@@ -654,6 +687,10 @@ $("#add").onclick = () => {
   openNote(n);
   setTimeout(() => $("#t").focus(), 300);
 };
+$("#btnSearch").onclick = () => { $("#sbar").hidden = false; history.pushState({ v: "q" }, ""); q.focus(); };
+q.oninput = render;
+q.onkeydown = e => { if (e.key === "Enter") q.blur(); };
+$("#qClose").onclick = () => history.back();
 list.onclick = e => {
   const el = e.target.closest(".note");
   const n = el && notes.find(x => x.id === el.dataset.id);
@@ -703,6 +740,9 @@ $("#btnExport").onclick = async () => {
   a.download = f.name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  settings.lastBackup = Date.now();
+  saveRaw(SETTINGS_KEY, settings);
+  refreshBackupInfo();
   toast("Backup saved");
 };
 
@@ -739,9 +779,10 @@ $("#btnClearAll").onclick = async () => {
 };
 
 addEventListener("popstate", () => {
-  if (ed.classList.contains("open")) closeNote();
-  $("#settings").classList.remove("open");
+  if (ed.classList.contains("open")) { closeNote(); return; }
   $("#installGuide").classList.remove("show");
+  if ($("#settings").classList.contains("open")) { $("#settings").classList.remove("open"); return; }
+  if (!$("#sbar").hidden) closeSearch();
 });
 
 addEventListener("keydown", e => {
@@ -765,6 +806,7 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catc
 (async () => {
   applyTheme();
   refreshSecurityUI();
+  refreshBackupInfo();
   $("#btnInstall").hidden = isStandalone();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
 
