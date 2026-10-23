@@ -856,14 +856,17 @@ function showInstallGuide() {
   let s;
   if (p === "ios") {
     s = ["Open the <b>Share</b> menu <span style=\"opacity:.7\">□↑</span>", "Tap <b>Add to Home Screen</b>", "Tap <b>Add</b>"];
-  } else if (/Firefox/.test(ua) && p === "desktop") {
-    s = ["Firefox on desktop can't install web apps", "Open this page in <b>Chrome</b>, <b>Edge</b> or <b>Brave</b>"];
-  } else if (/Firefox/.test(ua)) {
-    s = ["Tap the <b>⋮</b> menu", "Tap <b>Install</b>"];
-  } else if (/SamsungBrowser/.test(ua)) {
-    s = ["Tap the <b>☰</b> menu", "Tap <b>Add page to</b>, then <b>Home screen</b>"];
   } else if (p === "android") {
-    s = ["Tap the <b>⋮</b> menu", "Tap <b>Install app</b>", "If the menu only shows <b>Add to Home screen</b>, this browser can't install it as an app. Use Chrome."];
+    const other = /Firefox|EdgA|OPR|Opera|SamsungBrowser/.test(ua) || navigator.brave;
+    if (other) {
+      s = ["This browser can only add a shortcut, not a real app", "Open this page in <b>Chrome</b> and follow the install steps there"];
+    } else {
+      s = ["Use the page for 30 seconds and tap once", "Tap <b>⋮</b>, then <b>Install and create shortcut</b>", "Tap <b>Install</b>, not <b>Create shortcut</b>", "If <b>Install</b> is greyed out, this phone can't install apps from Chrome (needs Google Play Services and Play Store access)"];
+    }
+  } else if (/Firefox/.test(ua)) {
+    s = ["Firefox on desktop can't install web apps", "Open this page in <b>Chrome</b> or <b>Edge</b>"];
+  } else if (/^((?!chrome|android).)*safari/i.test(ua)) {
+    s = ["In Safari, choose <b>File</b>, then <b>Add to Dock</b>"];
   } else {
     s = ["Click the <b>install icon</b> in the address bar <span style=\"opacity:.7\">⊕</span>", "Or open the browser menu and choose <b>Install ioNote</b>"];
   }
