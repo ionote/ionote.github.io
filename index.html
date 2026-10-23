@@ -145,13 +145,12 @@ button:disabled{opacity:.4;pointer-events:none}
 #lock svg{width:48px;height:48px;color:var(--acc);margin-bottom:16px}
 #lock h2{margin:0 0 8px;font-size:22px}
 #lock p{margin:0 0 24px;color:var(--mut);font-size:14px;max-width:280px}
-.pin-input{display:flex;gap:10px;margin-bottom:20px}
-.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--mut);transition:background .15s,border-color .15s}
-.pin-dot.filled{background:var(--acc);border-color:var(--acc)}
-.pin-pad{display:grid;grid-template-columns:repeat(3,72px);gap:12px}
-.pin-key{width:72px;height:72px;border-radius:50%;font-size:24px;font-weight:500;background:var(--card);box-shadow:var(--shadow)}
-.pin-key:hover{background:var(--card-hover)}
-.pin-key.action{font-size:14px;color:var(--mut)}
+#lock input{width:100%;max-width:320px;height:48px;padding:0 14px;margin-bottom:10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:16px}
+#lock .lock-btn{width:100%;max-width:320px;height:48px;border-radius:12px;background:var(--acc);color:#fff;font-weight:600;font-size:15px;margin-top:4px}
+#lock .lock-btn:disabled{opacity:.6}
+#lock .lock-alt{margin-top:8px;height:44px;padding:0 16px;color:var(--mut);font-size:14px}
+#lock #lockErr{margin:0 0 8px;min-height:18px;color:var(--danger);font-size:13px}
+.set-row select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-width:55%}
 
 #settings{position:fixed;inset:0;background:var(--bg);z-index:60;transform:translateX(105%);transition:transform .28s var(--ease);display:flex;flex-direction:column;padding:calc(var(--st) + 4px) 0 0}
 #settings.open{transform:translateX(0)}
@@ -191,12 +190,13 @@ button:disabled{opacity:.4;pointer-events:none}
 
 <div id="lock">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-  <h2>Notes are locked</h2>
-  <p>Enter your passcode to unlock. Notes are encrypted on this device.</p>
-  <div class="pin-input" id="pinDots">
-    <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
-  </div>
-  <div class="pin-pad" id="pinPad"></div>
+  <h2 id="lockTitle">Notes are locked</h2>
+  <p id="lockText"></p>
+  <input id="lockPass" type="password" autocomplete="current-password" placeholder="Passphrase" aria-label="Passphrase">
+  <input id="lockPass2" type="password" autocomplete="new-password" placeholder="Repeat passphrase" aria-label="Repeat passphrase">
+  <p id="lockErr" role="alert"></p>
+  <button class="lock-btn" id="lockOk">Unlock</button>
+  <button class="lock-alt" id="lockCancel">Cancel</button>
 </div>
 
 <div id="settings">
@@ -214,14 +214,18 @@ button:disabled{opacity:.4;pointer-events:none}
     </div>
     <div class="set-group">
       <label>Security</label>
-      <div class="set-row"><span>Lock &amp; encrypt with passcode</span><div class="toggle" id="togLock" role="switch"></div></div>
-      <p class="hint">When enabled, notes are encrypted with AES-256 before being stored. Your passcode never leaves this device.</p>
-      <button class="set-btn" id="btnChangePin" style="display:none">Change passcode</button>
+      <div class="set-row"><span>Encrypt with passphrase</span><div class="toggle" id="togLock" role="switch"></div></div>
+      <p class="hint">Off: notes are stored on this device without encryption. On: notes are encrypted with AES-256 and need your passphrase to open. If you forget it, they cannot be recovered.</p>
+      <div class="set-row" id="rowAuto" style="display:none"><span>Lock when away for</span><select id="selAuto" aria-label="Auto-lock"><option value="0">Immediately</option><option value="1">1 minute</option><option value="5">5 minutes</option><option value="30">30 minutes</option></select></div>
+      <button class="set-btn" id="btnChangePass" style="display:none">Change passphrase</button>
+      <button class="set-btn" id="btnLockNow" style="display:none">Lock now</button>
     </div>
     <div class="set-group">
       <label>Data</label>
-      <button class="set-btn" id="btnExport">Export notes (JSON)</button>
-      <button class="set-btn" id="btnImport">Import notes</button>
+      <button class="set-btn" id="btnShare">Share backup</button>
+      <button class="set-btn" id="btnExport">Save backup to device</button>
+      <button class="set-btn" id="btnImport">Import backup</button>
+      <p class="hint">Backups are encrypted when encryption is on. Importing merges notes and never deletes any.</p>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
       <button class="set-btn danger" id="btnClearAll">Delete all notes</button>
     </div>
@@ -311,7 +315,8 @@ button:disabled{opacity:.4;pointer-events:none}
 
 const STORE_KEY = "notes_v3_enc";
 const SETTINGS_KEY = "notes_settings_v3";
-const SALT = "notes_pwa_v3_salt_9f2a";
+const ITER = 600000;
+const CHECK = "ionote";
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -333,10 +338,10 @@ function fromB64(str) {
   return out;
 }
 
-async function deriveKey(pin, saltBytes) {
-  const base = await crypto.subtle.importKey("raw", te.encode(pin), "PBKDF2", false, ["deriveKey"]);
+async function deriveKey(pass, salt, iter = ITER) {
+  const base = await crypto.subtle.importKey("raw", te.encode(pass.normalize("NFKC")), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: saltBytes, iterations: 210000, hash: "SHA-256" },
+    { name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" },
     base,
     { name: "AES-GCM", length: 256 },
     false,
@@ -353,15 +358,22 @@ async function encryptText(plain, key) {
 async function decryptText(payload, key) {
   const [ivB, ctB] = payload.split(":");
   if (!ivB || !ctB) throw new Error("bad payload");
-  const iv = fromB64(ivB);
-  const ct = fromB64(ctB);
-  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(ivB) }, key, fromB64(ctB));
   return td.decode(pt);
 }
 
-async function pinHash(pin) {
-  const buf = await crypto.subtle.digest("SHA-256", te.encode(pin + SALT));
-  return b64(buf);
+async function checkKey(key, check) {
+  try { return (await decryptText(check, key)) === CHECK; } catch { return false; }
+}
+
+async function decryptItems(items, key) {
+  const out = [];
+  for (const n of items) {
+    try {
+      out.push({ id: n.id, d: n.d, pinned: !!n.pinned, t: await decryptText(n.t, key), b: await decryptText(n.b, key) });
+    } catch {}
+  }
+  return out;
 }
 
 /* ── Storage ── */
@@ -376,22 +388,20 @@ function saveRaw(key, data) {
   catch { toast("Could not save — storage full"); }
 }
 
-let settings = loadRaw(SETTINGS_KEY, {
-  theme: "system",
-  lockEnabled: false,
-  pinHash: null,
-  salt: null,
-  installDismissed: false
-});
+let settings = {
+  autoLock: 5,
+  ...loadRaw(SETTINGS_KEY, { theme: "system", lockEnabled: false, salt: null, iter: null, check: null, installDismissed: false })
+};
 
 let notes = [];          // plaintext in memory only after unlock
 let cryptoKey = null;    // AES key while unlocked
 let cur = null;
 let filter = "all";
 let saveTimer = null;
-let pinBuffer = "";
-let pinMode = "unlock";
-let pendingPin = "";
+let lockMode = "unlock";
+let importData = null;
+let hiddenAt = 0;
+let holdLock = 0;
 let deferredPrompt = null;
 
 const list = $("#list");
@@ -425,7 +435,8 @@ function toast(msg, ms = 2200) {
 
 /* ── Persist notes (encrypt if lock on) ── */
 async function persistNotes() {
-  if (settings.lockEnabled && cryptoKey) {
+  if (settings.lockEnabled && !cryptoKey) return;
+  if (settings.lockEnabled) {
     const packed = [];
     for (const n of notes) {
       packed.push({
@@ -438,33 +449,15 @@ async function persistNotes() {
     }
     saveRaw(STORE_KEY, { enc: true, items: packed });
   } else {
-    // Store plaintext only when lock is off
     saveRaw(STORE_KEY, { enc: false, items: notes.map(n => ({ id: n.id, t: n.t, b: n.b, d: n.d, pinned: !!n.pinned })) });
   }
 }
 
 async function loadNotes() {
   const data = loadRaw(STORE_KEY, { enc: false, items: [] });
-  if (!data.items) return [];
-  if (data.enc) {
-    if (!cryptoKey) return null; // still locked
-    const out = [];
-    for (const n of data.items) {
-      try {
-        out.push({
-          id: n.id,
-          d: n.d,
-          pinned: !!n.pinned,
-          t: await decryptText(n.t, cryptoKey),
-          b: await decryptText(n.b, cryptoKey)
-        });
-      } catch {
-        // corrupted entry — skip
-      }
-    }
-    return out;
-  }
-  return data.items.map(n => ({ id: n.id, t: n.t || "", b: n.b || "", d: n.d || Date.now(), pinned: !!n.pinned }));
+  if (!Array.isArray(data.items)) return [];
+  if (!data.enc) return data.items.map(n => ({ id: n.id, t: n.t || "", b: n.b || "", d: n.d || Date.now(), pinned: !!n.pinned }));
+  return cryptoKey ? decryptItems(data.items, cryptoKey) : null;
 }
 
 /* ── Theme ── */
@@ -572,92 +565,148 @@ async function deleteCurrent() {
   toast("Deleted");
 }
 
-/* ── PIN / Lock ── */
-function buildPinPad() {
-  const pad = $("#pinPad");
-  pad.innerHTML = "";
-  ["1","2","3","4","5","6","7","8","9","","0","⌫"].forEach(k => {
-    const btn = document.createElement("button");
-    btn.className = "pin-key" + (k === "⌫" || !k ? " action" : "");
-    btn.textContent = k || "";
-    if (!k) { btn.disabled = true; btn.style.visibility = "hidden"; }
-    else btn.onclick = () => onPinKey(k);
-    pad.appendChild(btn);
-  });
-}
-function updatePinDots() {
-  $$("#pinDots .pin-dot").forEach((d, i) => d.classList.toggle("filled", i < pinBuffer.length));
-}
+/* ── Lock ── */
+const LOCK_UI = {
+  unlock: { t: "Notes are locked", p: "Enter your passphrase to open them.", ok: "Unlock", two: false, cancel: false, input: true },
+  set: { t: "Encrypt notes", p: "Choose a passphrase of at least 12 characters. If you forget it, your notes cannot be recovered.", ok: "Encrypt", two: true, cancel: true, input: true },
+  change: { t: "Change passphrase", p: "Choose a new passphrase of at least 12 characters. If you forget it, your notes cannot be recovered.", ok: "Change", two: true, cancel: true, input: true },
+  import: { t: "Encrypted backup", p: "Enter the passphrase this backup was made with.", ok: "Import", two: false, cancel: true, input: true },
+  legacy: { t: "Old lock format", p: "These notes were locked with a PIN by an older version and can't be opened here. Erase them to start fresh.", ok: "Erase old notes", two: false, cancel: false, input: false }
+};
 
-async function onPinKey(k) {
-  if (k === "⌫") { pinBuffer = pinBuffer.slice(0, -1); updatePinDots(); return; }
-  if (pinBuffer.length >= 4) return;
-  pinBuffer += k;
-  updatePinDots();
-  if (pinBuffer.length < 4) return;
-
-  if (pinMode === "unlock") {
-    const hash = await pinHash(pinBuffer);
-    if (hash === settings.pinHash) {
-      const salt = fromB64(settings.salt);
-      cryptoKey = await deriveKey(pinBuffer, salt);
-      const loaded = await loadNotes();
-      if (loaded === null) { toast("Decryption failed"); pinBuffer = ""; updatePinDots(); return; }
-      notes = loaded;
-      pinBuffer = "";
-      updatePinDots();
-      $("#lock").classList.remove("show");
-      render();
-    } else {
-      toast("Wrong passcode");
-      pinBuffer = "";
-      updatePinDots();
-    }
-  } else if (pinMode === "set") {
-    pendingPin = pinBuffer;
-    pinBuffer = "";
-    updatePinDots();
-    pinMode = "confirm";
-    $("#lock h2").textContent = "Confirm passcode";
-    $("#lock p").textContent = "Enter the same 4-digit passcode again";
-  } else if (pinMode === "confirm") {
-    if (pinBuffer === pendingPin) {
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      settings.salt = b64(salt);
-      settings.pinHash = await pinHash(pinBuffer);
-      settings.lockEnabled = true;
-      cryptoKey = await deriveKey(pinBuffer, salt);
-      saveRaw(SETTINGS_KEY, settings);
-      await persistNotes(); // re-encrypt existing notes
-      $("#togLock").classList.add("on");
-      $("#btnChangePin").style.display = "";
-      $("#lock").classList.remove("show");
-      pinBuffer = "";
-      pendingPin = "";
-      updatePinDots();
-      toast("Lock & encryption enabled");
-    } else {
-      toast("Passcodes don't match");
-      pinBuffer = ""; pendingPin = ""; pinMode = "set";
-      updatePinDots();
-      $("#lock h2").textContent = "Create passcode";
-      $("#lock p").textContent = "Choose a 4-digit passcode. Notes will be encrypted.";
-    }
-  }
-}
-
-function showLock(mode = "unlock") {
-  pinMode = mode;
-  pinBuffer = "";
-  updatePinDots();
-  if (mode === "set") {
-    $("#lock h2").textContent = "Create passcode";
-    $("#lock p").textContent = "Choose a 4-digit passcode. Notes will be encrypted.";
-  } else {
-    $("#lock h2").textContent = "Notes are locked";
-    $("#lock p").textContent = "Enter your passcode to unlock. Notes are encrypted on this device.";
-  }
+function showLock(mode) {
+  lockMode = mode;
+  const u = LOCK_UI[mode];
+  $("#lockTitle").textContent = u.t;
+  $("#lockText").textContent = u.p;
+  $("#lockOk").textContent = u.ok;
+  $("#lockPass").style.display = u.input ? "" : "none";
+  $("#lockPass2").style.display = u.two ? "" : "none";
+  $("#lockCancel").style.display = u.cancel ? "" : "none";
+  $("#lockPass").value = "";
+  $("#lockPass2").value = "";
+  $("#lockErr").textContent = "";
   $("#lock").classList.add("show");
+  if (u.input) $("#lockPass").focus();
+}
+
+function hideLock() {
+  $("#lockPass").value = "";
+  $("#lockPass2").value = "";
+  $("#lock").classList.remove("show");
+}
+
+function refreshSecurityUI() {
+  const on = settings.lockEnabled && !!settings.check;
+  $("#togLock").classList.toggle("on", on);
+  ["#rowAuto", "#btnChangePass", "#btnLockNow"].forEach(id => { $(id).style.display = on ? "" : "none"; });
+  $("#selAuto").value = String(settings.autoLock);
+}
+
+async function submitLock() {
+  const pass = $("#lockPass").value;
+  const fail = m => { $("#lockErr").textContent = m; };
+  $("#lockOk").disabled = true;
+  try {
+    if (lockMode === "legacy") {
+      if (!confirm("Erase the old locked notes permanently?")) return;
+      localStorage.removeItem(STORE_KEY);
+      Object.assign(settings, { lockEnabled: false, salt: null, iter: null, check: null });
+      delete settings.pinHash;
+      saveRaw(SETTINGS_KEY, settings);
+      notes = [];
+      refreshSecurityUI();
+      hideLock();
+      render();
+      return;
+    }
+    if (lockMode === "unlock") {
+      const key = await deriveKey(pass, fromB64(settings.salt), settings.iter);
+      if (!(await checkKey(key, settings.check))) return fail("Wrong passphrase");
+      cryptoKey = key;
+      notes = (await loadNotes()) || [];
+      hideLock();
+      render();
+      return;
+    }
+    if (lockMode === "import") {
+      const d = importData;
+      const key = await deriveKey(pass, fromB64(d.salt), d.iter);
+      if (!(await checkKey(key, d.check))) return fail("Wrong passphrase");
+      const items = await decryptItems(d.items, key);
+      importData = null;
+      hideLock();
+      await mergeNotes(items);
+      return;
+    }
+    if (pass.length < 12) return fail("Use at least 12 characters");
+    if (pass !== $("#lockPass2").value) return fail("Passphrases don't match");
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const key = await deriveKey(pass, salt);
+    settings.salt = b64(salt);
+    settings.iter = ITER;
+    settings.check = await encryptText(CHECK, key);
+    settings.lockEnabled = true;
+    cryptoKey = key;
+    saveRaw(SETTINGS_KEY, settings);
+    await persistNotes();
+    refreshSecurityUI();
+    hideLock();
+    toast(lockMode === "set" ? "Encryption on" : "Passphrase changed");
+  } catch {
+    fail("Something went wrong");
+  } finally {
+    $("#lockOk").disabled = false;
+  }
+}
+
+async function lockApp() {
+  if (!settings.lockEnabled || !cryptoKey) return;
+  clearTimeout(saveTimer);
+  await persistNotes();
+  cryptoKey = null;
+  notes = [];
+  cur = null;
+  importData = null;
+  $("#t").value = "";
+  $("#b").value = "";
+  q.value = "";
+  $("#searchWrap").classList.remove("has-query");
+  ed.classList.remove("open");
+  $("#settings").classList.remove("open");
+  $("#sheetOverlay").classList.remove("show");
+  list.innerHTML = "";
+  showLock("unlock");
+}
+
+async function mergeNotes(items) {
+  let added = 0, updated = 0;
+  for (const n of items) {
+    const have = notes.find(x => x.id === n.id);
+    if (!have) { notes.unshift(n); added++; }
+    else if (n.d > have.d) { Object.assign(have, n); updated++; }
+  }
+  await persistNotes();
+  render();
+  toast(`Imported ${added} new, ${updated} updated`);
+}
+
+const clean = arr => arr
+  .filter(n => n && typeof n === "object")
+  .map(n => ({
+    id: String(n.id || uid()),
+    t: String(n.t ?? n.title ?? ""),
+    b: String(n.b ?? n.body ?? n.content ?? ""),
+    d: Number(n.d ?? n.date) || Date.now(),
+    pinned: !!n.pinned
+  }));
+
+async function backupFile() {
+  await persistNotes();
+  const out = settings.lockEnabled
+    ? { app: "ionote", v: 1, enc: true, salt: settings.salt, iter: settings.iter, check: settings.check, items: loadRaw(STORE_KEY, { items: [] }).items }
+    : { app: "ionote", v: 1, enc: false, items: notes.map(n => ({ id: n.id, t: n.t, b: n.b, d: n.d, pinned: !!n.pinned })) };
+  return new File([JSON.stringify(out)], `ionote-backup-${new Date().toISOString().slice(0, 10)}.json`, { type: "application/json" });
 }
 
 /* ── PWA Install ── */
@@ -751,56 +800,64 @@ $("#togTheme").onclick = () => {
 };
 
 $("#togLock").onclick = async () => {
-  if (settings.lockEnabled) {
-    if (!confirm("Disable lock? Notes will be stored unencrypted.")) return;
-    settings.lockEnabled = false;
-    settings.pinHash = null;
-    settings.salt = null;
-    cryptoKey = null;
-    saveRaw(SETTINGS_KEY, settings);
-    await persistNotes();
-    $("#togLock").classList.remove("on");
-    $("#btnChangePin").style.display = "none";
-    toast("Lock disabled");
-  } else {
-    showLock("set");
+  if (!settings.lockEnabled) { showLock("set"); return; }
+  if (!confirm("Turn off encryption? Notes will be stored unencrypted.")) return;
+  Object.assign(settings, { lockEnabled: false, salt: null, iter: null, check: null });
+  cryptoKey = null;
+  saveRaw(SETTINGS_KEY, settings);
+  await persistNotes();
+  refreshSecurityUI();
+  toast("Encryption off");
+};
+$("#btnChangePass").onclick = () => showLock("change");
+$("#btnLockNow").onclick = lockApp;
+$("#selAuto").onchange = e => { settings.autoLock = Number(e.target.value); saveRaw(SETTINGS_KEY, settings); };
+$("#lockOk").onclick = submitLock;
+$("#lockCancel").onclick = () => { importData = null; hideLock(); };
+$("#lock").addEventListener("keydown", e => { if (e.key === "Enter") submitLock(); });
+
+document.addEventListener("visibilitychange", () => {
+  if (Date.now() < holdLock) return;
+  if (document.hidden) {
+    hiddenAt = Date.now();
+    if (settings.autoLock === 0) lockApp();
+    return;
   }
-};
-$("#btnChangePin").onclick = () => showLock("set");
+  if (hiddenAt && settings.lockEnabled && cryptoKey && Date.now() - hiddenAt >= settings.autoLock * 60000) lockApp();
+  hiddenAt = 0;
+});
 
-$("#btnExport").onclick = () => {
-  const data = JSON.stringify(notes.map(n => ({ id: n.id, t: n.t, b: n.b, d: n.d, pinned: n.pinned })), null, 2);
-  const blob = new Blob([data], { type: "application/json" });
+$("#btnShare").onclick = async () => {
+  holdLock = Date.now() + 120000;
+  const f = await backupFile();
+  if (navigator.canShare && navigator.canShare({ files: [f] })) {
+    try { await navigator.share({ files: [f], title: "ioNote backup" }); } catch {}
+  } else toast("File sharing isn't supported here. Use Save instead.");
+};
+
+$("#btnExport").onclick = async () => {
+  const f = await backupFile();
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `ionote-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.href = URL.createObjectURL(f);
+  a.download = f.name;
   a.click();
-  URL.revokeObjectURL(a.href);
-  toast("Exported");
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast("Backup saved");
 };
 
-$("#btnImport").onclick = () => $("#importFile").click();
+$("#btnImport").onclick = () => { holdLock = Date.now() + 120000; $("#importFile").click(); };
 $("#importFile").onchange = e => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = async () => {
     try {
-      const imported = JSON.parse(reader.result);
-      if (!Array.isArray(imported)) throw new Error("invalid");
-      const mapped = imported.map(n => ({
-        id: n.id || uid(),
-        t: String(n.t || n.title || ""),
-        b: String(n.b || n.body || n.content || ""),
-        d: n.d || n.date || Date.now(),
-        pinned: !!n.pinned
-      }));
-      if (confirm(`Import ${mapped.length} note${mapped.length !== 1 ? "s" : ""}?`)) {
-        notes = [...mapped, ...notes];
-        await persistNotes();
-        render();
-        toast(`Imported ${mapped.length}`);
-      }
+      const data = JSON.parse(reader.result);
+      if (Array.isArray(data)) await mergeNotes(clean(data));
+      else if (!Array.isArray(data.items)) throw new Error("invalid");
+      else if (!data.enc) await mergeNotes(clean(data.items));
+      else if (!data.salt || !data.iter || !data.check) throw new Error("invalid");
+      else { importData = data; showLock("import"); }
     } catch { toast("Invalid file"); }
     e.target.value = "";
   };
@@ -940,16 +997,20 @@ if ("serviceWorker" in navigator) {
 
 /* ── Init ── */
 (async () => {
-  buildPinPad();
   updateInstallUI();
-  $("#togLock").classList.toggle("on", settings.lockEnabled);
-  $("#btnChangePin").style.display = settings.lockEnabled ? "" : "none";
+  refreshSecurityUI();
+  navigator.storage?.persist?.();
 
-  if (settings.lockEnabled && settings.pinHash) {
-    showLock("unlock");
-  } else {
-    notes = (await loadNotes()) || [];
-    render();
+  if (settings.lockEnabled) {
+    showLock(settings.check ? "unlock" : "legacy");
+    return;
+  }
+  notes = (await loadNotes()) || [];
+  render();
+  if (!settings.noticeSeen) {
+    settings.noticeSeen = true;
+    saveRaw(SETTINGS_KEY, settings);
+    toast("Notes are saved on this device without encryption. Turn it on in Settings.", 6000);
   }
 })();
 })();

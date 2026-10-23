@@ -6,25 +6,31 @@ Live: https://ionote.github.io
 
 ## Features
 
-- Offline (service worker)
-- Installable PWA
-- Optional passcode lock, AES-256-GCM, PBKDF2 key derivation
-- Light, dark, system theme
-- Pin, search, export, import
-- No tracking, no external requests
+- Offline (service worker), installable PWA
+- Optional encryption with a passphrase (AES-256-GCM, PBKDF2-SHA256 600,000 iterations)
+- Auto-lock when the app is left for a chosen time
+- Encrypted backups, share or save as a file, import merges notes
+- Pin, search, light, dark and system themes
+- No account, no server, no analytics, no external requests
+
+## Privacy model
+
+Notes live in the browser storage of your device. With encryption off they are stored as plain text, protected only by your phone lock. With encryption on, the key is derived from your passphrase, kept in memory only, and dropped when the app locks. There is no recovery: a forgotten passphrase means lost notes. Keep a backup.
 
 ## Deploy
 
-1. Create the organization `ionote`.
-2. Create a public repository named `ionote.github.io`.
-3. Upload the files in this folder to the repo root.
-4. Settings, Pages, Deploy from a branch, `main`, `/ (root)`.
-5. Open https://ionote.github.io
+1. Create a public repository named `ionote.github.io` in the `ionote` organization.
+2. Upload these files to the repo root.
+3. Settings, Pages, Deploy from a branch, `main`, `/ (root)`.
+4. Enable two-factor authentication on the account and organization, and protect `main`. Anyone who can push can change the code that handles your passphrase.
 
 ## Install on Android
 
-Use Chrome, menu, **Install app**. Do not use **Add to Home screen**, it makes a shortcut.
-If you installed a shortcut before, remove it first, then clear site data for the domain and reload.
+Chrome, menu, **Install and create shortcut**, then **Install**. Choosing **Create shortcut** gives a plain browser shortcut.
+
+## Upgrading from the PIN version
+
+This version has no PIN. Notes locked with the old PIN cannot be opened here. Turn the lock off in the old version, or export, before updating. Otherwise the app offers to erase them.
 
 ## Local test
 
