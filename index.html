@@ -1,0 +1,959 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ioNote">
+<meta name="description" content="ioNote: a simple, fast, private notes app that works fully offline">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'">
+<title>ioNote</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+:root {
+  --bg: #fafafa; --fg: #111; --mut: #6b6b6b; --line: #eaeaea;
+  --card: #fff; --card-hover: #f5f5f5; --acc: #ff6900;
+  --acc-soft: rgba(255,105,0,.12); --danger: #e11d48; --success: #16a34a;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
+  --radius: 14px;
+  --st: max(env(safe-area-inset-top,0px),12px);
+  --sb: max(env(safe-area-inset-bottom,0px),12px);
+  --sl: max(env(safe-area-inset-left,0px),0px);
+  --sr: max(env(safe-area-inset-right,0px),0px);
+  --font: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --ease: cubic-bezier(.22,1,.36,1);
+}
+[data-theme="dark"] {
+  --bg:#0c0c0c; --fg:#f0f0f0; --mut:#8a8a8a; --line:#222;
+  --card:#161616; --card-hover:#1e1e1e; --acc-soft:rgba(255,105,0,.18);
+  --shadow:0 1px 3px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    --bg:#0c0c0c; --fg:#f0f0f0; --mut:#8a8a8a; --line:#222;
+    --card:#161616; --card-hover:#1e1e1e; --acc-soft:rgba(255,105,0,.18);
+    --shadow:0 1px 3px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
+  }
+}
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 var(--font);padding:0 var(--sr) 0 var(--sl);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+input,textarea,button{font:inherit;color:inherit}
+input,textarea{background:none;border:0;outline:0;width:100%;resize:none}
+button{border:0;background:none;cursor:pointer;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;transition:background .15s,transform .12s,opacity .15s;-webkit-user-select:none;user-select:none}
+button:active{transform:scale(.96)}
+button:disabled{opacity:.4;pointer-events:none}
+
+.header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:calc(var(--st) + 8px) 16px 10px;border-bottom:1px solid transparent;transition:border-color .2s}
+.header.scrolled{border-bottom-color:var(--line)}
+.header-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.header h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.02em}
+.header-actions{display:flex;gap:4px}
+.icon-btn{width:42px;height:42px;border-radius:50%;background:var(--card);color:var(--fg);box-shadow:var(--shadow)}
+.icon-btn:hover{background:var(--card-hover)}
+.icon-btn svg{width:20px;height:20px}
+
+.search-wrap{margin-top:10px;position:relative}
+.search-wrap input{height:44px;padding:0 16px 0 44px;background:var(--card);border-radius:22px;box-shadow:var(--shadow);transition:box-shadow .2s}
+.search-wrap input:focus{box-shadow:0 0 0 2px var(--acc-soft),var(--shadow)}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--mut);pointer-events:none}
+.search-icon svg{width:18px;height:18px}
+.search-clear{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;color:var(--mut);display:none}
+.search-wrap.has-query .search-clear{display:flex}
+
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 16px 4px;overflow-x:auto;scrollbar-width:none}
+.toolbar::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;height:34px;padding:0 14px;border-radius:17px;background:var(--card);color:var(--mut);font-size:13px;font-weight:500;box-shadow:var(--shadow);transition:background .15s,color .15s}
+.chip.active{background:var(--acc);color:#fff}
+.chip:hover:not(.active){background:var(--card-hover)}
+.count{margin-left:auto;font-size:13px;color:var(--mut);white-space:nowrap}
+
+#list{padding:8px 12px calc(var(--sb) + 90px);display:grid;gap:8px}
+.note{background:var(--card);padding:14px 16px;border-radius:var(--radius);box-shadow:var(--shadow);cursor:pointer;transition:transform .15s var(--ease),background .15s;animation:fadeUp .3s var(--ease) both;position:relative;overflow:hidden}
+.note:active{transform:scale(.985)}
+.note:hover{background:var(--card-hover)}
+.note.pinned::before{content:"";position:absolute;top:0;left:0;width:0;height:0;border:10px solid transparent;border-top-color:var(--acc);border-left-color:var(--acc)}
+.note-title{display:block;font-weight:600;font-size:16px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-bottom:2px}
+.note-preview{margin:0;color:var(--mut);font-size:14px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.45}
+.note-meta{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--mut)}
+
+#empty{text-align:center;color:var(--mut);padding:20vh 24px 0}
+#empty svg{width:64px;height:64px;margin-bottom:12px;opacity:.4}
+#empty p{margin:0 0 4px;font-size:17px;font-weight:500;color:var(--fg)}
+#empty span{font-size:14px}
+
+.fab{position:fixed;right:calc(var(--sr) + 16px);bottom:calc(var(--sb) + 16px);width:56px;height:56px;border-radius:50%;background:var(--acc);color:#fff;box-shadow:0 4px 16px rgba(255,105,0,.4),var(--shadow);z-index:30;transition:transform .2s var(--ease)}
+.fab:hover{transform:scale(1.06)}
+.fab:active{transform:scale(.94)}
+.fab svg{width:26px;height:26px}
+
+/* Install banner */
+#installBanner{
+  display:none;position:fixed;left:12px;right:12px;bottom:calc(var(--sb) + 80px);
+  background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.18);
+  z-index:40;align-items:center;gap:12px;border:1px solid var(--line);
+  animation:fadeUp .35s var(--ease);
+}
+#installBanner.show{display:flex}
+#installBanner p{margin:0;flex:1;font-size:14px;font-weight:500}
+#installBanner .install-btn{
+  background:var(--acc);color:#fff;height:40px;padding:0 18px;border-radius:10px;
+  font-size:14px;font-weight:600;flex-shrink:0;
+}
+#installBanner .dismiss{color:var(--mut);width:36px;height:36px;flex-shrink:0}
+
+#ed{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:50;transform:translateX(105%);transition:transform .28s var(--ease);padding:calc(var(--st) + 4px) 0 0}
+#ed.open{transform:translateX(0)}
+.ed-header{display:flex;align-items:center;gap:4px;padding:4px 8px 4px 4px;border-bottom:1px solid var(--line)}
+.ed-header button{color:var(--mut)}
+.ed-header button:hover{color:var(--fg);background:var(--card)}
+.ed-header .save-status{margin-left:auto;font-size:12px;color:var(--mut);transition:color .2s}
+.ed-header .save-status.saved{color:var(--success)}
+.ed-header .save-status.saving{color:var(--acc)}
+#t{font-size:22px;font-weight:700;padding:16px 20px 6px;letter-spacing:-.01em}
+#b{flex:1;padding:6px 20px 20px;line-height:1.65;font-size:16px;overflow-y:auto}
+.ed-footer{display:flex;align-items:center;gap:8px;padding:8px 12px calc(var(--sb) + 8px);border-top:1px solid var(--line);background:var(--bg)}
+.ed-footer .word-count{margin-right:auto;font-size:12px;color:var(--mut)}
+.ed-footer button{height:40px;padding:0 14px;border-radius:10px;font-size:14px;font-weight:500}
+.btn-danger{color:var(--danger)}
+.btn-danger:hover{background:rgba(225,29,72,.1)}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:flex-end;justify-content:center}
+.overlay.show{opacity:1;pointer-events:auto}
+.sheet{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:12px 20px calc(var(--sb) + 20px);transform:translateY(100%);transition:transform .28s var(--ease);box-shadow:0 -4px 24px rgba(0,0,0,.15)}
+.overlay.show .sheet{transform:translateY(0)}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px}
+.sheet h3{margin:0 0 12px;font-size:18px}
+.sheet-opt{display:flex;align-items:center;gap:12px;width:100%;padding:14px 12px;border-radius:12px;font-size:15px;text-align:left;transition:background .12s}
+.sheet-opt:hover{background:var(--card-hover)}
+.sheet-opt svg{width:20px;height:20px;flex-shrink:0;color:var(--mut)}
+.sheet-opt.danger{color:var(--danger)}
+.sheet-opt.danger svg{color:var(--danger)}
+
+.toast{position:fixed;bottom:calc(var(--sb) + 80px);left:50%;transform:translateX(-50%) translateY(20px);background:var(--fg);color:var(--bg);padding:10px 20px;border-radius:12px;font-size:14px;font-weight:500;z-index:100;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s var(--ease);white-space:nowrap;box-shadow:var(--shadow)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+#lock{position:fixed;inset:0;background:var(--bg);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+#lock.show{display:flex}
+#lock svg{width:48px;height:48px;color:var(--acc);margin-bottom:16px}
+#lock h2{margin:0 0 8px;font-size:22px}
+#lock p{margin:0 0 24px;color:var(--mut);font-size:14px;max-width:280px}
+.pin-input{display:flex;gap:10px;margin-bottom:20px}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--mut);transition:background .15s,border-color .15s}
+.pin-dot.filled{background:var(--acc);border-color:var(--acc)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,72px);gap:12px}
+.pin-key{width:72px;height:72px;border-radius:50%;font-size:24px;font-weight:500;background:var(--card);box-shadow:var(--shadow)}
+.pin-key:hover{background:var(--card-hover)}
+.pin-key.action{font-size:14px;color:var(--mut)}
+
+#settings{position:fixed;inset:0;background:var(--bg);z-index:60;transform:translateX(105%);transition:transform .28s var(--ease);display:flex;flex-direction:column;padding:calc(var(--st) + 4px) 0 0}
+#settings.open{transform:translateX(0)}
+.set-header{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.set-header h2{margin:0;font-size:18px;flex:1}
+.set-body{flex:1;overflow-y:auto;padding:16px}
+.set-group{margin-bottom:24px}
+.set-group label{display:block;font-size:12px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--card);border-radius:var(--radius);margin-bottom:6px;box-shadow:var(--shadow);gap:12px}
+.set-row span{font-size:15px}
+.toggle{width:48px;height:28px;border-radius:14px;background:var(--line);position:relative;transition:background .2s;flex-shrink:0;cursor:pointer}
+.toggle.on{background:var(--acc)}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s var(--ease);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{transform:translateX(20px)}
+.set-btn{width:100%;padding:14px 16px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);text-align:left;font-size:15px;margin-bottom:6px;transition:background .12s}
+.set-btn:hover{background:var(--card-hover)}
+.set-btn.danger{color:var(--danger)}
+.hint{font-size:12px;color:var(--mut);margin:4px 0 0;line-height:1.4}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Install guide */
+#installGuide{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:120;align-items:flex-end;justify-content:center}
+#installGuide.show{display:flex}
+#installGuide .sheet{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px 20px calc(var(--sb) + 24px);box-shadow:0 -4px 24px rgba(0,0,0,.2)}
+#installGuide h3{margin:0 0 8px;font-size:18px}
+#installGuide ol{margin:12px 0 16px;padding-left:20px;color:var(--fg);font-size:15px;line-height:1.7}
+#installGuide li{margin-bottom:6px}
+#installGuide .guide-close{width:100%;height:48px;border-radius:12px;background:var(--acc);color:#fff;font-weight:600;font-size:15px}
+#installBanner{display:none}
+#installBanner.show{display:flex}
+
+</style>
+</head>
+<body>
+
+<div id="lock">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+  <h2>Notes are locked</h2>
+  <p>Enter your passcode to unlock. Notes are encrypted on this device.</p>
+  <div class="pin-input" id="pinDots">
+    <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+  </div>
+  <div class="pin-pad" id="pinPad"></div>
+</div>
+
+<div id="settings">
+  <div class="set-header">
+    <button class="icon-btn" id="setBack" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <h2>Settings</h2>
+  </div>
+  <div class="set-body">
+    <div class="set-group">
+      <label>Appearance</label>
+      <div class="set-row"><span>Dark mode</span><div class="toggle" id="togTheme" role="switch"></div></div>
+      <div class="set-row"><span>Follow system</span><div class="toggle" id="togSystem" role="switch"></div></div>
+    </div>
+    <div class="set-group">
+      <label>Security</label>
+      <div class="set-row"><span>Lock &amp; encrypt with passcode</span><div class="toggle" id="togLock" role="switch"></div></div>
+      <p class="hint">When enabled, notes are encrypted with AES-256 before being stored. Your passcode never leaves this device.</p>
+      <button class="set-btn" id="btnChangePin" style="display:none">Change passcode</button>
+    </div>
+    <div class="set-group">
+      <label>Data</label>
+      <button class="set-btn" id="btnExport">Export notes (JSON)</button>
+      <button class="set-btn" id="btnImport">Import notes</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <button class="set-btn danger" id="btnClearAll">Delete all notes</button>
+    </div>
+    <div class="set-group">
+      <label>App</label>
+      <button class="set-btn" id="btnInstall">Install app</button>
+      <div class="set-row"><span style="color:var(--mut);font-size:13px">ioNote · Fully local · Encrypted option · No tracking</span></div>
+    </div>
+  </div>
+</div>
+
+<header class="header" id="header">
+  <div class="header-row">
+    <h1>ioNote</h1>
+    <div class="header-actions">
+      <button class="icon-btn" id="btnSettings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="search-wrap" id="searchWrap">
+    <input id="q" type="search" placeholder="Search notes…" autocomplete="off" enterkeyhint="search" spellcheck="false">
+    <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></span>
+    <button class="search-clear" id="qClear" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  </div>
+</header>
+
+<div class="toolbar">
+  <button class="chip active" data-filter="all">All</button>
+  <button class="chip" data-filter="pinned">Pinned</button>
+  <span class="count" id="count"></span>
+</div>
+
+<main id="list"></main>
+
+<button class="fab" id="add" aria-label="New note">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<div id="installBanner">
+  <p>Install ioNote on your home screen</p>
+  <button class="install-btn" id="installBtn">Install</button>
+  <button class="dismiss" id="installDismiss" aria-label="Dismiss">✕</button>
+</div>
+
+<section id="ed">
+  <div class="ed-header">
+    <button id="back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="22" height="22"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <span class="save-status" id="saveStatus"></span>
+    <button id="btnPin" aria-label="Pin" title="Pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M12 17v5M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1z"/></svg></button>
+    <button id="btnMore" aria-label="More"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="20" height="20"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+  </div>
+  <input id="t" placeholder="Title" dir="auto" autocomplete="off" spellcheck="true">
+  <textarea id="b" placeholder="Start typing…" dir="auto" spellcheck="true"></textarea>
+  <div class="ed-footer">
+    <span class="word-count" id="wordCount"></span>
+    <button class="btn-danger" id="del">Delete</button>
+  </div>
+</section>
+
+<div class="overlay" id="sheetOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>Note options</h3>
+    <button class="sheet-opt" id="optCopy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy content</button>
+    <button class="sheet-opt" id="optShare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>Share</button>
+    <button class="sheet-opt" id="optDuplicate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4a2 2 0 0 1 2-2h10"/></svg>Duplicate note</button>
+    <button class="sheet-opt danger" id="optDelete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Delete note</button>
+  </div>
+</div>
+
+
+<div id="installGuide">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3 id="guideTitle">Install ioNote</h3>
+    <ol id="guideSteps"></ol>
+    <button class="guide-close" id="guideClose">Got it</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+"use strict";
+
+const STORE_KEY = "notes_v3_enc";
+const SETTINGS_KEY = "notes_settings_v3";
+const SALT = "notes_pwa_v3_salt_9f2a";
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ── Crypto helpers (AES-GCM + PBKDF2) ── */
+const te = new TextEncoder();
+const td = new TextDecoder();
+
+function b64(buf) {
+  const bytes = buf instanceof ArrayBuffer ? new Uint8Array(buf) : buf;
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+function fromB64(str) {
+  const bin = atob(str);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function deriveKey(pin, saltBytes) {
+  const base = await crypto.subtle.importKey("raw", te.encode(pin), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: saltBytes, iterations: 210000, hash: "SHA-256" },
+    base,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function encryptText(plain, key) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, te.encode(plain));
+  return b64(iv) + ":" + b64(ct);
+}
+
+async function decryptText(payload, key) {
+  const [ivB, ctB] = payload.split(":");
+  if (!ivB || !ctB) throw new Error("bad payload");
+  const iv = fromB64(ivB);
+  const ct = fromB64(ctB);
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+  return td.decode(pt);
+}
+
+async function pinHash(pin) {
+  const buf = await crypto.subtle.digest("SHA-256", te.encode(pin + SALT));
+  return b64(buf);
+}
+
+/* ── Storage ── */
+function loadRaw(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch { return fallback; }
+}
+function saveRaw(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)); }
+  catch { toast("Could not save — storage full"); }
+}
+
+let settings = loadRaw(SETTINGS_KEY, {
+  theme: "system",
+  lockEnabled: false,
+  pinHash: null,
+  salt: null,
+  installDismissed: false
+});
+
+let notes = [];          // plaintext in memory only after unlock
+let cryptoKey = null;    // AES key while unlocked
+let cur = null;
+let filter = "all";
+let saveTimer = null;
+let pinBuffer = "";
+let pinMode = "unlock";
+let pendingPin = "";
+let deferredPrompt = null;
+
+const list = $("#list");
+const ed = $("#ed");
+const q = $("#q");
+const toastEl = $("#toast");
+
+const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+const fmtDate = d => {
+  const now = new Date(), dt = new Date(d), diff = (now - dt) / 864e5;
+  if (diff < 1 && now.getDate() === dt.getDate()) return dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  if (diff < 2) return "Yesterday";
+  if (diff < 7) return dt.toLocaleDateString(undefined, { weekday: "long" });
+  return dt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: now.getFullYear() !== dt.getFullYear() ? "numeric" : undefined });
+};
+
+const wordCount = t => {
+  const words = t.trim().split(/\s+/).filter(Boolean).length;
+  const chars = t.length;
+  return words ? `${words} word${words !== 1 ? "s" : ""} · ${chars} char${chars !== 1 ? "s" : ""}` : `${chars} char${chars !== 1 ? "s" : ""}`;
+};
+
+function toast(msg, ms = 2200) {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(() => toastEl.classList.remove("show"), ms);
+}
+
+/* ── Persist notes (encrypt if lock on) ── */
+async function persistNotes() {
+  if (settings.lockEnabled && cryptoKey) {
+    const packed = [];
+    for (const n of notes) {
+      packed.push({
+        id: n.id,
+        d: n.d,
+        pinned: !!n.pinned,
+        t: await encryptText(n.t || "", cryptoKey),
+        b: await encryptText(n.b || "", cryptoKey)
+      });
+    }
+    saveRaw(STORE_KEY, { enc: true, items: packed });
+  } else {
+    // Store plaintext only when lock is off
+    saveRaw(STORE_KEY, { enc: false, items: notes.map(n => ({ id: n.id, t: n.t, b: n.b, d: n.d, pinned: !!n.pinned })) });
+  }
+}
+
+async function loadNotes() {
+  const data = loadRaw(STORE_KEY, { enc: false, items: [] });
+  if (!data.items) return [];
+  if (data.enc) {
+    if (!cryptoKey) return null; // still locked
+    const out = [];
+    for (const n of data.items) {
+      try {
+        out.push({
+          id: n.id,
+          d: n.d,
+          pinned: !!n.pinned,
+          t: await decryptText(n.t, cryptoKey),
+          b: await decryptText(n.b, cryptoKey)
+        });
+      } catch {
+        // corrupted entry — skip
+      }
+    }
+    return out;
+  }
+  return data.items.map(n => ({ id: n.id, t: n.t || "", b: n.b || "", d: n.d || Date.now(), pinned: !!n.pinned }));
+}
+
+/* ── Theme ── */
+function applyTheme() {
+  const t = settings.theme;
+  document.documentElement.dataset.theme = t;
+  const isDark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+  $("#togSystem").classList.toggle("on", t === "system");
+  $("#togTheme").classList.toggle("on", t === "system" ? isDark : t === "dark");
+}
+applyTheme();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (settings.theme === "system") applyTheme(); });
+
+/* ── Render ── */
+function getFiltered() {
+  let items = notes.filter(n => {
+    if (filter === "pinned" && !n.pinned) return false;
+    const qq = q.value.trim().toLowerCase();
+    if (!qq) return true;
+    return (n.t + " " + n.b).toLowerCase().includes(qq);
+  });
+  items.sort((a, b) => (a.pinned !== b.pinned ? (b.pinned ? 1 : -1) : b.d - a.d));
+  return items;
+}
+
+function render() {
+  const items = getFiltered();
+  $("#count").textContent = items.length ? `${items.length} note${items.length !== 1 ? "s" : ""}` : "";
+  if (!items.length) {
+    const emptyMsg = q.value.trim()
+      ? { title: "No results", sub: "Try different keywords" }
+      : filter === "pinned"
+        ? { title: "No pinned notes", sub: "Pin a note from inside it" }
+        : { title: "No notes yet", sub: "Tap + to create your first note" };
+    list.innerHTML = `<div id="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg><p>${emptyMsg.title}</p><span>${emptyMsg.sub}</span></div>`;
+    return;
+  }
+  list.innerHTML = items.map((n, i) => `
+    <div class="note${n.pinned ? " pinned" : ""}" data-id="${esc(n.id)}" style="animation-delay:${Math.min(i * 30, 200)}ms">
+      <b class="note-title" dir="auto">${esc(n.t) || "Untitled"}</b>
+      <p class="note-preview" dir="auto">${esc(n.b)}</p>
+      <div class="note-meta">${n.pinned ? '<span>📌</span>' : ""}<span>${fmtDate(n.d)}</span></div>
+    </div>`).join("");
+}
+
+/* ── Editor ── */
+function openNote(n) {
+  cur = n;
+  $("#t").value = n.t;
+  $("#b").value = n.b;
+  updatePinBtn();
+  updateWordCount();
+  $("#saveStatus").textContent = "";
+  ed.classList.add("open");
+  history.pushState({ note: 1 }, "");
+  setTimeout(() => { if (!n.t && !n.b) $("#t").focus(); }, 280);
+}
+
+function closeNote() {
+  if (cur && !cur.t.trim() && !cur.b.trim()) {
+    notes = notes.filter(n => n !== cur);
+    persistNotes();
+  }
+  cur = null;
+  ed.classList.remove("open");
+  render();
+}
+
+function scheduleSave() {
+  if (!cur) return;
+  cur.t = $("#t").value;
+  cur.b = $("#b").value;
+  cur.d = Date.now();
+  $("#saveStatus").textContent = "Saving…";
+  $("#saveStatus").className = "save-status saving";
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    await persistNotes();
+    $("#saveStatus").textContent = "Saved";
+    $("#saveStatus").className = "save-status saved";
+    setTimeout(() => { if ($("#saveStatus").textContent === "Saved") $("#saveStatus").textContent = ""; }, 1400);
+  }, 450);
+}
+
+function updateWordCount() { $("#wordCount").textContent = wordCount($("#b").value); }
+function updatePinBtn() {
+  const btn = $("#btnPin");
+  if (cur?.pinned) { btn.style.color = "var(--acc)"; btn.setAttribute("aria-label", "Unpin"); }
+  else { btn.style.color = ""; btn.setAttribute("aria-label", "Pin"); }
+}
+async function togglePin() {
+  if (!cur) return;
+  cur.pinned = !cur.pinned;
+  cur.d = Date.now();
+  await persistNotes();
+  updatePinBtn();
+  toast(cur.pinned ? "Pinned" : "Unpinned");
+}
+async function deleteCurrent() {
+  if (!cur) return;
+  notes = notes.filter(n => n !== cur);
+  await persistNotes();
+  cur = null;
+  history.back();
+  toast("Deleted");
+}
+
+/* ── PIN / Lock ── */
+function buildPinPad() {
+  const pad = $("#pinPad");
+  pad.innerHTML = "";
+  ["1","2","3","4","5","6","7","8","9","","0","⌫"].forEach(k => {
+    const btn = document.createElement("button");
+    btn.className = "pin-key" + (k === "⌫" || !k ? " action" : "");
+    btn.textContent = k || "";
+    if (!k) { btn.disabled = true; btn.style.visibility = "hidden"; }
+    else btn.onclick = () => onPinKey(k);
+    pad.appendChild(btn);
+  });
+}
+function updatePinDots() {
+  $$("#pinDots .pin-dot").forEach((d, i) => d.classList.toggle("filled", i < pinBuffer.length));
+}
+
+async function onPinKey(k) {
+  if (k === "⌫") { pinBuffer = pinBuffer.slice(0, -1); updatePinDots(); return; }
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += k;
+  updatePinDots();
+  if (pinBuffer.length < 4) return;
+
+  if (pinMode === "unlock") {
+    const hash = await pinHash(pinBuffer);
+    if (hash === settings.pinHash) {
+      const salt = fromB64(settings.salt);
+      cryptoKey = await deriveKey(pinBuffer, salt);
+      const loaded = await loadNotes();
+      if (loaded === null) { toast("Decryption failed"); pinBuffer = ""; updatePinDots(); return; }
+      notes = loaded;
+      pinBuffer = "";
+      updatePinDots();
+      $("#lock").classList.remove("show");
+      render();
+    } else {
+      toast("Wrong passcode");
+      pinBuffer = "";
+      updatePinDots();
+    }
+  } else if (pinMode === "set") {
+    pendingPin = pinBuffer;
+    pinBuffer = "";
+    updatePinDots();
+    pinMode = "confirm";
+    $("#lock h2").textContent = "Confirm passcode";
+    $("#lock p").textContent = "Enter the same 4-digit passcode again";
+  } else if (pinMode === "confirm") {
+    if (pinBuffer === pendingPin) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      settings.salt = b64(salt);
+      settings.pinHash = await pinHash(pinBuffer);
+      settings.lockEnabled = true;
+      cryptoKey = await deriveKey(pinBuffer, salt);
+      saveRaw(SETTINGS_KEY, settings);
+      await persistNotes(); // re-encrypt existing notes
+      $("#togLock").classList.add("on");
+      $("#btnChangePin").style.display = "";
+      $("#lock").classList.remove("show");
+      pinBuffer = "";
+      pendingPin = "";
+      updatePinDots();
+      toast("Lock & encryption enabled");
+    } else {
+      toast("Passcodes don't match");
+      pinBuffer = ""; pendingPin = ""; pinMode = "set";
+      updatePinDots();
+      $("#lock h2").textContent = "Create passcode";
+      $("#lock p").textContent = "Choose a 4-digit passcode. Notes will be encrypted.";
+    }
+  }
+}
+
+function showLock(mode = "unlock") {
+  pinMode = mode;
+  pinBuffer = "";
+  updatePinDots();
+  if (mode === "set") {
+    $("#lock h2").textContent = "Create passcode";
+    $("#lock p").textContent = "Choose a 4-digit passcode. Notes will be encrypted.";
+  } else {
+    $("#lock h2").textContent = "Notes are locked";
+    $("#lock p").textContent = "Enter your passcode to unlock. Notes are encrypted on this device.";
+  }
+  $("#lock").classList.add("show");
+}
+
+/* ── PWA Install ── */
+
+
+
+
+
+
+
+
+
+
+/* ── Events ── */
+$("#add").onclick = async () => {
+  const n = { id: uid(), t: "", b: "", d: Date.now(), pinned: false };
+  notes.unshift(n);
+  await persistNotes();
+  openNote(n);
+};
+
+list.onclick = e => {
+  const el = e.target.closest(".note");
+  if (!el) return;
+  const n = notes.find(x => x.id === el.dataset.id);
+  if (n) openNote(n);
+};
+
+$("#t").oninput = () => scheduleSave();
+$("#b").oninput = () => { scheduleSave(); updateWordCount(); };
+$("#back").onclick = () => history.back();
+$("#del").onclick = () => { if (confirm("Delete this note?")) deleteCurrent(); };
+$("#btnPin").onclick = togglePin;
+$("#btnMore").onclick = () => $("#sheetOverlay").classList.add("show");
+$("#sheetOverlay").onclick = e => { if (e.target === $("#sheetOverlay")) $("#sheetOverlay").classList.remove("show"); };
+
+$("#optCopy").onclick = async () => {
+  $("#sheetOverlay").classList.remove("show");
+  const text = (cur.t ? cur.t + "\n\n" : "") + cur.b;
+  try { await navigator.clipboard.writeText(text); toast("Copied"); } catch { toast("Could not copy"); }
+};
+$("#optShare").onclick = async () => {
+  $("#sheetOverlay").classList.remove("show");
+  const text = (cur.t ? cur.t + "\n\n" : "") + cur.b;
+  if (navigator.share) { try { await navigator.share({ title: cur.t || "Note", text }); } catch {} }
+  else { try { await navigator.clipboard.writeText(text); toast("Copied (share unavailable)"); } catch { toast("Could not share"); } }
+};
+$("#optDuplicate").onclick = async () => {
+  $("#sheetOverlay").classList.remove("show");
+  const copy = { id: uid(), t: cur.t, b: cur.b, d: Date.now(), pinned: false };
+  notes.unshift(copy);
+  await persistNotes();
+  toast("Duplicated");
+  history.back();
+  setTimeout(() => openNote(copy), 320);
+};
+$("#optDelete").onclick = () => {
+  $("#sheetOverlay").classList.remove("show");
+  if (confirm("Delete this note?")) deleteCurrent();
+};
+
+q.oninput = () => { $("#searchWrap").classList.toggle("has-query", !!q.value); render(); };
+$("#qClear").onclick = () => { q.value = ""; q.oninput(); q.focus(); };
+$$(".chip").forEach(c => {
+  c.onclick = () => {
+    $$(".chip").forEach(x => x.classList.remove("active"));
+    c.classList.add("active");
+    filter = c.dataset.filter;
+    render();
+  };
+});
+
+$("#btnSettings").onclick = () => { $("#settings").classList.add("open"); history.pushState({ settings: 1 }, ""); };
+$("#setBack").onclick = () => history.back();
+
+$("#togSystem").onclick = () => {
+  settings.theme = settings.theme === "system"
+    ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+    : "system";
+  saveRaw(SETTINGS_KEY, settings);
+  applyTheme();
+};
+$("#togTheme").onclick = () => {
+  if (settings.theme === "system") {
+    settings.theme = matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark";
+  } else {
+    settings.theme = settings.theme === "dark" ? "light" : "dark";
+  }
+  saveRaw(SETTINGS_KEY, settings);
+  applyTheme();
+};
+
+$("#togLock").onclick = async () => {
+  if (settings.lockEnabled) {
+    if (!confirm("Disable lock? Notes will be stored unencrypted.")) return;
+    settings.lockEnabled = false;
+    settings.pinHash = null;
+    settings.salt = null;
+    cryptoKey = null;
+    saveRaw(SETTINGS_KEY, settings);
+    await persistNotes();
+    $("#togLock").classList.remove("on");
+    $("#btnChangePin").style.display = "none";
+    toast("Lock disabled");
+  } else {
+    showLock("set");
+  }
+};
+$("#btnChangePin").onclick = () => showLock("set");
+
+$("#btnExport").onclick = () => {
+  const data = JSON.stringify(notes.map(n => ({ id: n.id, t: n.t, b: n.b, d: n.d, pinned: n.pinned })), null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `ionote-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("Exported");
+};
+
+$("#btnImport").onclick = () => $("#importFile").click();
+$("#importFile").onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      if (!Array.isArray(imported)) throw new Error("invalid");
+      const mapped = imported.map(n => ({
+        id: n.id || uid(),
+        t: String(n.t || n.title || ""),
+        b: String(n.b || n.body || n.content || ""),
+        d: n.d || n.date || Date.now(),
+        pinned: !!n.pinned
+      }));
+      if (confirm(`Import ${mapped.length} note${mapped.length !== 1 ? "s" : ""}?`)) {
+        notes = [...mapped, ...notes];
+        await persistNotes();
+        render();
+        toast(`Imported ${mapped.length}`);
+      }
+    } catch { toast("Invalid file"); }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+};
+
+$("#btnClearAll").onclick = async () => {
+  if (!confirm("Delete all notes permanently?\nThis cannot be undone.")) return;
+  notes = [];
+  await persistNotes();
+  render();
+  toast("All notes deleted");
+};
+
+window.addEventListener("scroll", () => $("#header").classList.toggle("scrolled", window.scrollY > 4), { passive: true });
+
+addEventListener("popstate", () => {
+  if (ed.classList.contains("open")) closeNote();
+  if ($("#settings").classList.contains("open")) $("#settings").classList.remove("open");
+  $("#sheetOverlay").classList.remove("show");
+});
+
+addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    if ($("#sheetOverlay").classList.contains("show")) $("#sheetOverlay").classList.remove("show");
+    else if (ed.classList.contains("open")) history.back();
+    else if ($("#settings").classList.contains("open")) history.back();
+  }
+  if (e.key === "/" && !ed.classList.contains("open") && !["INPUT","TEXTAREA"].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    q.focus();
+  }
+});
+
+
+/* ── Cross-browser Install ── */
+function isStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone === true
+    || document.referrer.includes("android-app://");
+}
+
+function getPlatform() {
+  const ua = navigator.userAgent || "";
+  if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return "ios";
+  if (/Android/i.test(ua)) return "android";
+  return "desktop";
+}
+
+function showInstallGuide() {
+  const platform = getPlatform();
+  const title = $("#guideTitle");
+  const steps = $("#guideSteps");
+  title.textContent = "Install ioNote";
+  if (platform === "ios") {
+    steps.innerHTML = `
+      <li>Open this site in <b>Safari</b> (not Chrome)</li>
+      <li>Tap the <b>Share</b> button <span style="opacity:.7">□↑</span></li>
+      <li>Scroll and tap <b>Add to Home Screen</b></li>
+      <li>Tap <b>Add</b></li>`;
+  } else if (platform === "android") {
+    steps.innerHTML = `
+      <li>Open this page in <b>Chrome</b></li>
+      <li>Tap the <b>⋮</b> menu, then <b>Install app</b></li>
+      <li>Do not choose <b>Add to Home screen</b>, it creates a plain shortcut</li>
+      <li>If only <b>Add to Home screen</b> is listed, reload the page once and check the menu again</li>`;
+  } else {
+    steps.innerHTML = `
+      <li>Click the <b>install icon</b> in the address bar <span style="opacity:.7">⊕</span></li>
+      <li>Or open the browser menu → <b>Install ioNote</b></li>
+      <li>Works best in Chrome, Edge, or Brave</li>`;
+  }
+  $("#installGuide").classList.add("show");
+}
+
+function updateInstallUI() {
+  if (isStandalone()) {
+    $("#installBanner").classList.remove("show");
+    $("#btnInstall").style.display = "none";
+    return;
+  }
+  $("#btnInstall").style.display = "";
+  $("#btnInstall").textContent = "Install app";
+  // Banner: show if not dismissed (works with or without beforeinstallprompt)
+  if (!settings.installDismissed) {
+    $("#installBanner").classList.add("show");
+  }
+}
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  updateInstallUI();
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredPrompt = null;
+  settings.installDismissed = true;
+  saveRaw(SETTINGS_KEY, settings);
+  updateInstallUI();
+  toast("App installed");
+});
+
+async function triggerInstall() {
+  if (deferredPrompt) {
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      if (outcome === "accepted") {
+        settings.installDismissed = true;
+        saveRaw(SETTINGS_KEY, settings);
+        toast("Installing…");
+      }
+    } catch (_) {}
+    updateInstallUI();
+    return;
+  }
+  showInstallGuide();
+}
+
+$("#installBtn").onclick = triggerInstall;
+$("#btnInstall").onclick = triggerInstall;
+$("#installDismiss").onclick = () => {
+  $("#installBanner").classList.remove("show");
+  settings.installDismissed = true;
+  saveRaw(SETTINGS_KEY, settings);
+};
+$("#guideClose").onclick = () => $("#installGuide").classList.remove("show");
+$("#installGuide").onclick = (e) => {
+  if (e.target === $("#installGuide")) $("#installGuide").classList.remove("show");
+};
+
+/* ── Service Worker ── */
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+/* ── Init ── */
+(async () => {
+  buildPinPad();
+  updateInstallUI();
+  $("#togLock").classList.toggle("on", settings.lockEnabled);
+  $("#btnChangePin").style.display = settings.lockEnabled ? "" : "none";
+
+  if (settings.lockEnabled && settings.pinHash) {
+    showLock("unlock");
+  } else {
+    notes = (await loadNotes()) || [];
+    render();
+  }
+})();
+})();
+</script>
+</body>
+</html>
