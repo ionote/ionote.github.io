@@ -851,28 +851,24 @@ function getPlatform() {
 }
 
 function showInstallGuide() {
-  const platform = getPlatform();
-  const title = $("#guideTitle");
-  const steps = $("#guideSteps");
-  title.textContent = "Install ioNote";
-  if (platform === "ios") {
-    steps.innerHTML = `
-      <li>Open this site in <b>Safari</b> (not Chrome)</li>
-      <li>Tap the <b>Share</b> button <span style="opacity:.7">□↑</span></li>
-      <li>Scroll and tap <b>Add to Home Screen</b></li>
-      <li>Tap <b>Add</b></li>`;
-  } else if (platform === "android") {
-    steps.innerHTML = `
-      <li>Open this page in <b>Chrome</b></li>
-      <li>Tap the <b>⋮</b> menu, then <b>Install app</b></li>
-      <li>Do not choose <b>Add to Home screen</b>, it creates a plain shortcut</li>
-      <li>If only <b>Add to Home screen</b> is listed, reload the page once and check the menu again</li>`;
+  const ua = navigator.userAgent || "";
+  const p = getPlatform();
+  let s;
+  if (p === "ios") {
+    s = ["Open the <b>Share</b> menu <span style=\"opacity:.7\">□↑</span>", "Tap <b>Add to Home Screen</b>", "Tap <b>Add</b>"];
+  } else if (/Firefox/.test(ua) && p === "desktop") {
+    s = ["Firefox on desktop can't install web apps", "Open this page in <b>Chrome</b>, <b>Edge</b> or <b>Brave</b>"];
+  } else if (/Firefox/.test(ua)) {
+    s = ["Tap the <b>⋮</b> menu", "Tap <b>Install</b>"];
+  } else if (/SamsungBrowser/.test(ua)) {
+    s = ["Tap the <b>☰</b> menu", "Tap <b>Add page to</b>, then <b>Home screen</b>"];
+  } else if (p === "android") {
+    s = ["Tap the <b>⋮</b> menu", "Tap <b>Install app</b>", "If the menu only shows <b>Add to Home screen</b>, this browser can't install it as an app. Use Chrome."];
   } else {
-    steps.innerHTML = `
-      <li>Click the <b>install icon</b> in the address bar <span style="opacity:.7">⊕</span></li>
-      <li>Or open the browser menu → <b>Install ioNote</b></li>
-      <li>Works best in Chrome, Edge, or Brave</li>`;
+    s = ["Click the <b>install icon</b> in the address bar <span style=\"opacity:.7\">⊕</span>", "Or open the browser menu and choose <b>Install ioNote</b>"];
   }
+  $("#guideTitle").textContent = "Install ioNote";
+  $("#guideSteps").innerHTML = s.map((x) => `<li>${x}</li>`).join("");
   $("#installGuide").classList.add("show");
 }
 
