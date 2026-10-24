@@ -17,110 +17,131 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script>
-try{var s=JSON.parse(localStorage.getItem("notes_settings_v3")||"{}");var d=s.theme==="dark"||(s.theme!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light"}catch(e){}
+try{var s=JSON.parse(localStorage.getItem("notes_settings_v3")||"{}");var d=s.theme==="dark"||(s.theme!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light";document.getElementById("metaTheme").content=d?"#0D0D11":"#F8F8FA"}catch(e){}
 </script>
 <style>
 :root{
-  --bg:#F8F8FA;--surface:#fff;--fg:#15151A;--mut:#8B8B96;--line:#E8E8ED;--track:#D4D4DC;--seg:#fff;
-  --acc:#4F46E5;--on-acc:#fff;--danger:#D92D20;
+  --bg:#F8F8FA;--surface:#fff;--fg:#15151A;--mut:#686873;--line:#E8E8ED;--ctl:#8A8A96;--seg:#fff;
+  --acc:#4F46E5;--on-acc:#fff;--danger:#D92D20;--toast-act:#A5ABFF;
+  --r-c:12px;--r-m:18px;--r-l:24px;
+  --ease-out:cubic-bezier(.23,1,.32,1);
   --st:max(env(safe-area-inset-top,0px),var(--safe-area-inset-top,0px));
   --sb:max(env(safe-area-inset-bottom,0px),var(--safe-area-inset-bottom,0px));
   --sl:max(env(safe-area-inset-left,0px),var(--safe-area-inset-left,0px));
   --sr:max(env(safe-area-inset-right,0px),var(--safe-area-inset-right,0px));
-  color-scheme:light
+  color-scheme:light;accent-color:var(--acc);scrollbar-width:thin;scrollbar-color:var(--ctl) transparent
 }
-[data-theme=dark]{--bg:#0D0D11;--surface:#17171C;--fg:#F4F4F6;--mut:#8C8C98;--line:#25252C;--track:#3A3A44;--seg:#3A3A44;--acc:#8B90FF;--on-acc:#0D0D11;--danger:#F97066;color-scheme:dark}
+[data-theme=dark]{--bg:#0D0D11;--surface:#17171C;--fg:#F4F4F6;--mut:#8C8C98;--line:#25252C;--ctl:#787884;--seg:#3A3A44;--acc:#8B90FF;--on-acc:#0D0D11;--danger:#F97066;--toast-act:#4F46E5;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
-html{background:var(--bg)}
-body{margin:0;min-height:100dvh;background:var(--bg);color:var(--fg);font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",sans-serif;-webkit-font-smoothing:antialiased;padding:0 var(--sr) 0 var(--sl)}
-button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
-input,textarea,select{font:inherit;color:inherit}
-input,textarea{background:none;border:0;outline:0;width:100%}
+html{background:var(--bg);overscroll-behavior-y:none;scroll-padding-bottom:calc(var(--sb) + 120px);-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100dvh;overscroll-behavior-y:none;background:var(--bg);color:var(--fg);font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",sans-serif;-webkit-font-smoothing:antialiased;padding:0 var(--sr) 0 var(--sl)}
+::selection{background:color-mix(in srgb,var(--acc) 28%,transparent)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+input,textarea,select{font:inherit;color:inherit;touch-action:manipulation}
+input,textarea{background:none;border:0;outline:0;width:100%;caret-color:var(--acc)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.ib{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;transition:background .15s}
+.ib{width:44px;height:44px;border-radius:var(--r-c);display:grid;place-items:center;flex:none;transition:background-color 120ms var(--ease-out)}
 .ib:active{background:var(--line)}
 
 #dock{position:fixed;left:calc(16px + var(--sl));bottom:calc(24px + var(--sb));z-index:20;display:flex;gap:8px}
-#dock .ib{width:50px;height:50px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
-#sbar{position:fixed;left:calc(16px + var(--sl));right:calc(16px + var(--sr));bottom:calc(24px + var(--sb));z-index:30;max-width:680px;margin:0 auto;display:flex;align-items:center;gap:10px;height:54px;padding:0 6px 0 16px;background:var(--surface);border:1px solid var(--acc);border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+#dock .ib{width:50px;height:50px;border-radius:var(--r-m);background:var(--surface);border:1px solid var(--line)}
+#sbar{position:fixed;left:calc(16px + var(--sl));right:calc(16px + var(--sr));bottom:calc(24px + var(--sb));z-index:30;max-width:680px;margin:0 auto;display:flex;align-items:center;gap:10px;height:56px;padding:0 6px 0 16px;background:var(--surface);border:1px solid var(--acc);border-radius:var(--r-m);box-shadow:0 8px 24px rgba(0,0,0,.12)}
 #sbar .ic{color:var(--mut)}
-#sbar input{flex:1;font-size:16px;-webkit-appearance:none;appearance:none}
+#sbar input{flex:1;min-width:0;font-size:16px;-webkit-appearance:none;appearance:none}
 #sbar input::-webkit-search-cancel-button{display:none}
-#sbar .ib{width:40px;height:40px;border-radius:12px}
 
 #list{max-width:680px;margin:0 auto;padding:calc(var(--st) + 20px) 16px calc(var(--sb) + 110px);display:grid;gap:10px}
-.note{display:block;width:100%;text-align:start;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;transition:transform .12s}
-.note:active{transform:scale(.985)}
+.note{display:block;width:100%;min-width:0;text-align:start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:14px 16px;content-visibility:auto;contain-intrinsic-size:auto 88px;transition:transform 120ms var(--ease-out),border-color 120ms var(--ease-out)}
+.note:active{transform:scale(.98)}
 .nt{display:block;font-weight:600;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.np{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px;color:var(--mut);font-size:14px;line-height:1.45}
-.nm{display:flex;align-items:center;gap:6px;margin-top:10px;color:var(--mut);font-size:12px}
+.np{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;margin-top:3px;color:var(--mut);font-size:14px;line-height:1.45}
+.nm{display:flex;align-items:center;gap:6px;margin-top:10px;color:var(--mut);font-size:13px;font-variant-numeric:tabular-nums}
 .nm .ic{width:13px;height:13px;color:var(--acc);fill:var(--acc)}
 .empty{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;margin-top:18vh;color:var(--mut)}
 .empty .ic{width:46px;height:46px;stroke-width:1.2;margin-bottom:8px}
 .empty b{color:var(--fg);font-size:17px}
 
-#add{position:fixed;right:calc(20px + var(--sr));bottom:calc(20px + var(--sb));z-index:20;width:58px;height:58px;border-radius:20px;display:grid;place-items:center;background:var(--acc);color:var(--on-acc);box-shadow:0 8px 24px color-mix(in srgb,var(--acc) 40%,transparent);transition:transform .15s}
-#add:active{transform:scale(.94)}
+#add{position:fixed;right:calc(20px + var(--sr));bottom:calc(20px + var(--sb));z-index:20;width:58px;height:58px;border-radius:var(--r-m);display:grid;place-items:center;background:var(--acc);color:var(--on-acc);transition:transform 120ms var(--ease-out)}
+#add:active{transform:scale(.96)}
 #add .ic{width:26px;height:26px;stroke-width:2.2}
 
-.page{position:fixed;inset:0;z-index:50;background:var(--bg);transform:translateX(100%);visibility:hidden;transition:transform .28s cubic-bezier(.2,.8,.2,1),visibility 0s .28s}
-.page.open{transform:none;visibility:visible;transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+.page{position:fixed;inset:0;z-index:50;background:var(--bg);overscroll-behavior:contain;transform:translateX(100%);visibility:hidden;transition:transform 200ms var(--ease-out),visibility 0s 200ms}
+.page.open{transform:none;visibility:visible;transition:transform 260ms var(--ease-out)}
 .col{max-width:680px;height:100%;margin:0 auto;padding:0 16px;display:flex;flex-direction:column}
 .pbar{display:flex;align-items:center;gap:2px;padding:calc(var(--st) + 8px) 0 8px;margin:0 -8px}
-.stamp{flex:1;text-align:center;color:var(--mut);font-size:13px}
+.stamp{flex:1;min-width:0;text-align:center;color:var(--mut);font-size:13px;font-variant-numeric:tabular-nums}
 #btnPin[aria-pressed=true]{color:var(--acc)}
 #btnPin[aria-pressed=true] .ic{fill:var(--acc)}
 #t{font-size:26px;font-weight:700;line-height:1.25;padding:8px 0 4px;letter-spacing:-.01em}
-#b{flex:1;min-height:0;resize:none;font-size:17px;line-height:1.65;padding:8px 0 calc(var(--sb) + 16px)}
-::placeholder{color:var(--mut);opacity:.7}
+#b{flex:1;min-height:0;resize:none;overscroll-behavior:contain;font-size:17px;line-height:1.65;padding:8px 0 calc(var(--sb) + 16px)}
+::placeholder{color:var(--mut);opacity:1}
 
-.pbody{flex:1;overflow-y:auto;padding:8px 0 calc(var(--sb) + 32px)}
+.pbody{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:8px 0 calc(var(--sb) + 32px)}
 .pbody>*+*{margin-top:14px}
-.pbar h2{margin:0 0 0 6px;font-size:20px;font-weight:700}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.pbar h2{margin:0 0 0 6px;font-size:20px;font-weight:700;text-wrap:balance}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden}
 .row{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;min-height:54px;padding:14px 16px;text-align:start}
+.row>span{min-width:0}
 .row+.row{border-top:1px solid var(--line)}
-.row b{display:block;font-weight:500}
+.row b{display:block;font-weight:500;overflow-wrap:anywhere}
 .row small{display:block;margin-top:2px;color:var(--mut);font-size:13px;line-height:1.35}
 .row.danger{color:var(--danger)}
 .row:active{background:var(--bg)}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:var(--line);border-radius:14px}
-.seg button{height:40px;border-radius:10px;color:var(--mut);font-size:14px;font-weight:500;transition:background .15s,color .15s}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:var(--line);border-radius:var(--r-c)}
+.seg button{height:44px;border-radius:9px;color:var(--mut);font-size:14px;font-weight:500;transition:background-color 120ms var(--ease-out),color 120ms var(--ease-out)}
 .seg button[aria-pressed=true]{background:var(--seg);color:var(--fg);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.toggle{width:50px;height:30px;border-radius:15px;background:var(--track);position:relative;flex:none;transition:background .2s}
-.toggle::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.toggle{width:50px;height:30px;border-radius:15px;background:var(--ctl);position:relative;flex:none;transition:background-color 200ms var(--ease-out)}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform 200ms var(--ease-out)}
 .toggle.on{background:var(--acc)}
 .toggle.on::after{transform:translateX(20px)}
-select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px}
+select{appearance:none;-webkit-appearance:none;background-color:var(--bg);color:var(--fg);border:1px solid var(--ctl);border-radius:10px;padding:10px 12px;font-size:16px}
+option{background-color:var(--surface);color:var(--fg)}
 
-#lock{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:var(--bg)}
+#lock{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:var(--bg);overscroll-behavior:contain}
 #lock.show{display:flex}
-.badge{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;margin-bottom:20px;color:var(--acc);background:var(--surface);border:1px solid var(--line)}
-#lock h2{margin:0 0 8px;font-size:22px;font-weight:700}
-#lock p{margin:0 0 22px;color:var(--mut);font-size:14px;max-width:300px;line-height:1.5}
+.badge{width:64px;height:64px;border-radius:var(--r-m);display:grid;place-items:center;margin-bottom:20px;color:var(--acc);background:var(--surface);border:1px solid var(--line)}
+#lock h2{margin:0 0 8px;font-size:22px;font-weight:700;text-wrap:balance}
+#lock p{margin:0 0 22px;color:var(--mut);font-size:14px;max-width:300px;line-height:1.5;text-wrap:pretty}
 #lock #lockErr{margin:0 0 8px;min-height:18px;color:var(--danger);font-size:13px}
-.field{width:100%;max-width:320px;height:50px;padding:0 16px;margin-bottom:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;font-size:16px}
-.field:focus{border-color:var(--acc);outline:0}
-.btn{width:100%;max-width:320px;height:50px;border-radius:14px;background:var(--acc);color:var(--on-acc);font-weight:600;font-size:16px}
+.field{width:100%;max-width:320px;height:50px;padding:0 16px;margin-bottom:10px;background:var(--surface);border:1px solid var(--ctl);border-radius:var(--r-c);font-size:16px}
+.field:focus{border-color:var(--acc)}
+.btn{width:100%;max-width:320px;height:50px;border-radius:var(--r-c);background:var(--acc);color:var(--on-acc);font-weight:600;font-size:16px;transition:transform 120ms var(--ease-out),opacity 120ms var(--ease-out)}
+.btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.6}
 .link{margin-top:6px;height:44px;padding:0 16px;color:var(--mut);font-size:15px}
+.link:active{color:var(--fg)}
 
-#toast{position:fixed;left:50%;bottom:calc(var(--sb) + 92px);z-index:300;display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px);padding:12px 16px;border-radius:14px;background:var(--fg);color:var(--bg);font-size:14px;opacity:0;pointer-events:none;transform:translate(-50%,10px);transition:opacity .2s,transform .2s}
+#toast{position:fixed;left:50%;bottom:calc(var(--sb) + 92px);z-index:300;display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px);padding:12px 16px;border-radius:var(--r-c);background:var(--fg);color:var(--bg);font-size:14px;opacity:0;pointer-events:none;transform:translate(-50%,10px);transition:opacity 200ms var(--ease-out),transform 200ms var(--ease-out)}
 #toast.show{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
-#toast button{color:var(--acc);font-weight:700}
+#toast button{color:var(--toast-act);font-weight:700;padding:10px 6px;margin:-10px -6px}
 
-#installGuide{position:fixed;inset:0;z-index:150;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);opacity:0;visibility:hidden;transition:opacity .2s,visibility 0s .2s}
-#installGuide.show{opacity:1;visibility:visible;transition:opacity .2s}
-.sheet{width:100%;max-width:520px;padding:22px 22px calc(var(--sb) + 22px);background:var(--surface);border-radius:24px 24px 0 0;transform:translateY(24px);transition:transform .25s}
+#installGuide{position:fixed;inset:0;z-index:150;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);overscroll-behavior:contain;opacity:0;visibility:hidden;transition:opacity 160ms var(--ease-out),visibility 0s 160ms}
+#installGuide.show{opacity:1;visibility:visible;transition:opacity 200ms var(--ease-out)}
+.sheet{width:100%;max-width:520px;padding:22px 22px calc(var(--sb) + 22px);background:var(--surface);border-radius:var(--r-l) var(--r-l) 0 0;transform:translateY(24px);transition:transform 250ms var(--ease-out)}
 #installGuide.show .sheet{transform:none}
-.sheet h3{margin:0 0 6px;font-size:19px}
+.sheet h3{margin:0 0 6px;font-size:19px;text-wrap:balance}
 .sheet ol{margin:10px 0 20px;padding-left:20px;font-size:15px;line-height:1.65}
 .sheet li{margin-bottom:4px}
 .sheet .btn{max-width:none}
 
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important}}
+@media (hover:hover) and (pointer:fine){
+  .ib:hover{background:var(--line)}
+  .note:hover{border-color:var(--ctl)}
+  .row:hover{background:var(--bg)}
+  .seg button[aria-pressed=false]:hover{color:var(--fg)}
+  .btn:hover{opacity:.92}
+  .link:hover{color:var(--fg)}
+}
+@media (prefers-reduced-motion:reduce){
+  .page{transform:none;opacity:0;transition:opacity 150ms linear,visibility 0s 150ms}
+  .page.open{opacity:1;transition:opacity 150ms linear}
+  .sheet{transform:none}
+  #toast,#toast.show{transform:translate(-50%,0)}
+  .note:active,#add:active,.btn:active{transform:none}
+}
 </style>
 </head>
 <body>
@@ -137,43 +158,44 @@ select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px s
   <symbol id="i-note" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4"/></symbol>
 </svg>
 
+<h1 class="sr">Notes</h1>
 <main id="list"></main>
 
 <div id="dock">
-  <button class="ib" id="btnSettings" aria-label="Settings"><svg class="ic"><use href="#i-sliders"/></svg></button>
-  <button class="ib" id="btnSearch" aria-label="Search" hidden><svg class="ic"><use href="#i-search"/></svg></button>
-  <button class="ib" id="btnLock" aria-label="Lock now" hidden><svg class="ic"><use href="#i-lock"/></svg></button>
+  <button class="ib" id="btnSettings" aria-label="Settings"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-sliders"/></svg></button>
+  <button class="ib" id="btnSearch" aria-label="Search" hidden><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-search"/></svg></button>
+  <button class="ib" id="btnLock" aria-label="Lock now" hidden><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-lock"/></svg></button>
 </div>
 
-<div id="sbar" hidden>
-  <svg class="ic"><use href="#i-search"/></svg>
-  <input id="q" type="search" placeholder="Search notes" dir="auto" autocomplete="off" enterkeyhint="search" spellcheck="false" aria-label="Search notes">
-  <button class="ib" id="qClose" aria-label="Close search"><svg class="ic"><use href="#i-x"/></svg></button>
+<div id="sbar" role="search" hidden>
+  <svg class="ic" aria-hidden="true" focusable="false"><use href="#i-search"/></svg>
+  <input id="q" name="search" type="search" placeholder="Search notes" dir="auto" autocomplete="off" enterkeyhint="search" spellcheck="false" aria-label="Search notes">
+  <button class="ib" id="qClose" aria-label="Close search"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg></button>
 </div>
 
-<button id="add" aria-label="New note"><svg class="ic"><use href="#i-plus"/></svg></button>
+<button id="add" aria-label="New note"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg></button>
 
 <section id="ed" class="page" aria-label="Note">
   <div class="col">
     <div class="pbar">
-      <button class="ib" id="back" aria-label="Back"><svg class="ic"><use href="#i-back"/></svg></button>
+      <button class="ib" id="back" aria-label="Back"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-back"/></svg></button>
       <span class="stamp" id="stamp"></span>
-      <button class="ib" id="btnPin" aria-label="Pin" aria-pressed="false"><svg class="ic"><use href="#i-pin"/></svg></button>
-      <button class="ib" id="btnDel" aria-label="Delete"><svg class="ic"><use href="#i-trash"/></svg></button>
+      <button class="ib" id="btnPin" aria-label="Pin" aria-pressed="false"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-pin"/></svg></button>
+      <button class="ib" id="btnDel" aria-label="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-trash"/></svg></button>
     </div>
-    <input id="t" placeholder="Title" dir="auto" autocomplete="off" enterkeyhint="next" maxlength="200" aria-label="Title">
-    <textarea id="b" placeholder="Write something…" dir="auto" aria-label="Note"></textarea>
+    <input id="t" name="title" placeholder="Title" dir="auto" autocomplete="off" enterkeyhint="next" maxlength="200" aria-label="Title">
+    <textarea id="b" name="note" placeholder="Write something…" dir="auto" aria-label="Note"></textarea>
   </div>
 </section>
 
 <section id="settings" class="page" aria-label="Settings">
   <div class="col">
     <div class="pbar">
-      <button class="ib" id="setBack" aria-label="Back"><svg class="ic"><use href="#i-back"/></svg></button>
+      <button class="ib" id="setBack" aria-label="Back"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-back"/></svg></button>
       <h2>Settings</h2>
     </div>
     <div class="pbody">
-      <div class="seg" id="seg">
+      <div class="seg" id="seg" role="group" aria-label="Theme">
         <button data-v="system">System</button>
         <button data-v="light">Light</button>
         <button data-v="dark">Dark</button>
@@ -186,7 +208,7 @@ select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px s
         </button>
         <div class="row" id="rowAuto" hidden>
           <b>Auto-lock</b>
-          <select id="selAuto" aria-label="Auto-lock">
+          <select id="selAuto" name="auto-lock" aria-label="Auto-lock">
             <option value="0">Immediately</option>
             <option value="1">1 minute</option>
             <option value="5">5 minutes</option>
@@ -210,20 +232,20 @@ select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px s
   </div>
 </section>
 
-<div id="lock" role="dialog" aria-modal="true">
-  <div class="badge"><svg class="ic"><use href="#i-lock"/></svg></div>
+<div id="lock" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <div class="badge"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-lock"/></svg></div>
   <h2 id="lockTitle"></h2>
   <p id="lockText"></p>
-  <input class="field" id="lockPass" type="password" autocomplete="current-password" placeholder="Passphrase" aria-label="Passphrase">
-  <input class="field" id="lockPass2" type="password" autocomplete="new-password" placeholder="Repeat passphrase" aria-label="Repeat passphrase">
+  <input class="field" id="lockPass" name="passphrase" type="password" autocomplete="current-password" placeholder="Passphrase" aria-label="Passphrase">
+  <input class="field" id="lockPass2" name="passphrase-confirm" type="password" autocomplete="new-password" placeholder="Repeat passphrase" aria-label="Repeat passphrase">
   <p id="lockErr" role="alert"></p>
   <button class="btn" id="lockOk">Unlock</button>
   <button class="link" id="lockCancel">Cancel</button>
 </div>
 
-<div id="installGuide" role="dialog" aria-modal="true">
+<div id="installGuide" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
   <div class="sheet">
-    <h3 id="guideTitle">Install ioNote</h3>
+    <h3 id="guideTitle">Install <span translate="no">ioNote</span></h3>
     <ol id="guideSteps"></ol>
     <button class="btn" id="guideClose">Got it</button>
   </div>
@@ -305,7 +327,7 @@ function loadRaw(key, fallback) {
 }
 function saveRaw(key, data) {
   try { localStorage.setItem(key, JSON.stringify(data)); }
-  catch { toast("Could not save, storage is full"); }
+  catch { toast("Couldn't save. Free up space on your device and try again."); }
 }
 
 let settings = {
@@ -327,6 +349,13 @@ let toastTimer = null;
 const list = $("#list");
 const ed = $("#ed");
 const q = $("#q");
+
+const fold = s => s.normalize("NFKC").toLowerCase()
+  .replace(/[\u064B-\u065F\u0670\u0640\u200C]/g, "")
+  .replace(/[\u0649\u06CC]/g, "\u064A")
+  .replace(/\u06A9/g, "\u0643")
+  .replace(/[\u0622\u0623\u0625\u0671]/g, "\u0627")
+  .replace(/[\u0660-\u0669\u06F0-\u06F9]/g, c => String(c.charCodeAt(0) & 15));
 
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -391,21 +420,21 @@ async function loadNotes() {
 
 /* ── List ── */
 function render() {
-  const term = q.value.trim().toLowerCase();
+  const term = fold(q.value.trim());
   $("#btnSearch").hidden = notes.length <= 8;
   const items = notes
-    .filter(n => !term || (n.t + "\n" + n.b).toLowerCase().includes(term))
+    .filter(n => !term || fold(n.t + "\n" + n.b).includes(term))
     .sort((a, b) => (b.pinned - a.pinned) || (b.d - a.d));
 
   if (!items.length) {
-    list.innerHTML = `<div class="empty"><svg class="ic"><use href="#i-note"/></svg><b>${term ? "No results" : "No notes yet"}</b><span>${term ? "Try a different word" : "Tap + to write your first note"}</span></div>`;
+    list.innerHTML = `<div class="empty"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-note"/></svg><b>${term ? "No results" : "No notes yet"}</b><span>${term ? "Try a different word" : "Tap + to write your first note"}</span></div>`;
     return;
   }
   list.innerHTML = items.map(n => {
     const lines = n.b.trim().split("\n");
     const title = n.t.trim() || lines[0] || "Untitled";
     const preview = (n.t.trim() ? lines : lines.slice(1)).join(" ").trim().slice(0, 200);
-    return `<button class="note" data-id="${esc(n.id)}"><span class="nt" dir="auto">${esc(title)}</span>${preview ? `<span class="np" dir="auto">${esc(preview)}</span>` : ""}<span class="nm">${n.pinned ? '<svg class="ic"><use href="#i-pin"/></svg>' : ""}<span>${fmtDate(n.d)}</span></span></button>`;
+    return `<button class="note" data-id="${esc(n.id)}"><span class="nt" dir="auto">${esc(title)}</span>${preview ? `<span class="np" dir="auto">${esc(preview)}</span>` : ""}<span class="nm">${n.pinned ? '<svg class="ic" aria-hidden="true" focusable="false"><use href="#i-pin"/></svg>' : ""}<span>${fmtDate(n.d)}</span></span></button>`;
   }).join("");
 }
 
@@ -445,6 +474,13 @@ function closeNote() {
   render();
 }
 
+function flushSave() {
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  persistNotes();
+}
+
 function scheduleSave() {
   if (!cur) return;
   cur.t = $("#t").value;
@@ -452,7 +488,7 @@ function scheduleSave() {
   cur.d = Date.now();
   stampUI();
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(persistNotes, 400);
+  saveTimer = setTimeout(() => { saveTimer = null; persistNotes(); }, 400);
 }
 
 async function togglePin() {
@@ -490,6 +526,9 @@ const LOCK_UI = {
   legacy: { t: "Old lock format", p: "These notes were locked with a PIN by an older version and can't be opened here. Erase them to start fresh.", ok: "Erase old notes", two: false, cancel: false, input: false }
 };
 
+const BG = "#list,#dock,#add,#ed,#settings,#sbar";
+const setInert = v => document.querySelectorAll(BG).forEach(el => { el.inert = v; });
+
 function showLock(mode) {
   lockMode = mode;
   const u = LOCK_UI[mode];
@@ -503,6 +542,7 @@ function showLock(mode) {
   $("#lockPass2").value = "";
   $("#lockErr").textContent = "";
   $("#lock").classList.add("show");
+  setInert(true);
   if (u.input) $("#lockPass").focus();
 }
 
@@ -510,6 +550,7 @@ function hideLock() {
   $("#lockPass").value = "";
   $("#lockPass2").value = "";
   $("#lock").classList.remove("show");
+  setInert(false);
 }
 
 function refreshSecurityUI() {
@@ -522,7 +563,7 @@ function refreshSecurityUI() {
 
 async function submitLock() {
   const pass = $("#lockPass").value;
-  const fail = m => { $("#lockErr").textContent = m; };
+  const fail = (m, el = $("#lockPass")) => { $("#lockErr").textContent = m; el.focus(); if (el.select) el.select(); };
   $("#lockOk").disabled = true;
   try {
     if (lockMode === "legacy") {
@@ -539,7 +580,7 @@ async function submitLock() {
     }
     if (lockMode === "unlock") {
       const key = await deriveKey(pass, fromB64(settings.salt), settings.iter);
-      if (!(await checkKey(key, settings.check))) return fail("Wrong passphrase");
+      if (!(await checkKey(key, settings.check))) return fail("Wrong passphrase. Check for typos and try again.");
       cryptoKey = key;
       notes = (await loadNotes()) || [];
       hideLock();
@@ -549,15 +590,15 @@ async function submitLock() {
     if (lockMode === "import") {
       const d = importData;
       const key = await deriveKey(pass, fromB64(d.salt), d.iter);
-      if (!(await checkKey(key, d.check))) return fail("Wrong passphrase");
+      if (!(await checkKey(key, d.check))) return fail("Wrong passphrase for this backup. Try the one you had when you saved it.");
       const items = await decryptItems(d.items, key);
       importData = null;
       hideLock();
       await mergeNotes(items);
       return;
     }
-    if (pass.length < 12) return fail("Use at least 12 characters");
-    if (pass !== $("#lockPass2").value) return fail("Passphrases don't match");
+    if (pass.length < 12) return fail("Use at least 12 characters. A few random words work well.");
+    if (pass !== $("#lockPass2").value) return fail("The two passphrases differ. Retype the second one.", $("#lockPass2"));
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const key = await deriveKey(pass, salt);
     settings.salt = b64(salt);
@@ -571,7 +612,7 @@ async function submitLock() {
     hideLock();
     toast(lockMode === "set" ? "Encryption on" : "Passphrase changed");
   } catch {
-    fail("Something went wrong");
+    fail("Couldn't finish that. Try again.");
   } finally {
     $("#lockOk").disabled = false;
   }
@@ -593,6 +634,7 @@ async function lockApp() {
   ed.classList.remove("open");
   $("#settings").classList.remove("open");
   $("#installGuide").classList.remove("show");
+  $("#settings").inert = false;
   hideToast();
   list.innerHTML = "";
   showLock("unlock");
@@ -663,6 +705,14 @@ function showInstallGuide() {
   }
   $("#guideSteps").innerHTML = s.map(x => `<li>${x}</li>`).join("");
   $("#installGuide").classList.add("show");
+  $("#settings").inert = true;
+  $("#guideClose").focus();
+}
+
+function closeGuide() {
+  $("#installGuide").classList.remove("show");
+  $("#settings").inert = false;
+  $("#btnInstall").focus({ preventScroll: true });
 }
 
 async function triggerInstall() {
@@ -704,7 +754,7 @@ $("#back").onclick = () => history.back();
 $("#btnPin").onclick = togglePin;
 $("#btnDel").onclick = deleteCurrent;
 
-$("#btnSettings").onclick = () => { $("#settings").classList.add("open"); history.pushState({ v: "set" }, ""); };
+$("#btnSettings").onclick = () => { $("#settings").classList.add("open"); history.pushState({ v: "set" }, ""); $("#setBack").focus({ preventScroll: true }); };
 $("#setBack").onclick = () => history.back();
 $("#btnLock").onclick = lockApp;
 
@@ -759,15 +809,15 @@ $("#importFile").onchange = e => {
       else if (!data.enc) await mergeNotes(clean(data.items));
       else if (!data.salt || !data.iter || !data.check) throw new Error("invalid");
       else { importData = data; showLock("import"); }
-    } catch { toast("Invalid file"); }
+    } catch { toast("That isn't an ioNote backup. Pick a .json file saved from ioNote."); }
     e.target.value = "";
   };
   reader.readAsText(file);
 };
 
 $("#btnInstall").onclick = triggerInstall;
-$("#guideClose").onclick = () => $("#installGuide").classList.remove("show");
-$("#installGuide").onclick = e => { if (e.target === $("#installGuide")) $("#installGuide").classList.remove("show"); };
+$("#guideClose").onclick = closeGuide;
+$("#installGuide").onclick = e => { if (e.target === $("#installGuide")) closeGuide(); };
 
 $("#btnClearAll").onclick = async () => {
   if (!confirm("Delete all notes permanently? This can't be undone.")) return;
@@ -780,16 +830,20 @@ $("#btnClearAll").onclick = async () => {
 
 addEventListener("popstate", () => {
   if (ed.classList.contains("open")) { closeNote(); return; }
-  $("#installGuide").classList.remove("show");
-  if ($("#settings").classList.contains("open")) { $("#settings").classList.remove("open"); return; }
+  if ($("#installGuide").classList.contains("show")) { closeGuide(); history.pushState({ v: "set" }, ""); return; }
+  if ($("#settings").classList.contains("open")) { $("#settings").classList.remove("open"); $("#btnSettings").focus({ preventScroll: true }); return; }
   if (!$("#sbar").hidden) closeSearch();
 });
 
 addEventListener("keydown", e => {
-  if (e.key === "Escape" && (ed.classList.contains("open") || $("#settings").classList.contains("open"))) history.back();
+  if (e.key !== "Escape") return;
+  if ($("#installGuide").classList.contains("show")) closeGuide();
+  else if (ed.classList.contains("open") || $("#settings").classList.contains("open")) history.back();
 });
 
+addEventListener("pagehide", flushSave);
 document.addEventListener("visibilitychange", () => {
+  if (document.hidden) flushSave();
   if (Date.now() < holdLock) return;
   if (document.hidden) {
     hiddenAt = Date.now();
