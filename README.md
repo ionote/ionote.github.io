@@ -19,6 +19,12 @@ Computer shortcuts: **N** new note, **/** search, **Esc** back.
 
 Notes stay in this browser on this device. Clearing browser data deletes them. In **Settings**, choose **Save backup**. **Restore backup** adds notes without deleting existing ones.
 
+## Sharing
+
+Tap the share icon in a note to make an encrypted link. The note is encrypted in your browser and stored only inside the link, so no server sees it. Send the passphrase by a different route than the link. A note too long for a link can go in a backup file instead.
+
+Once ioNote is installed on Android, you can also share text from other apps into it.
+
 ## Privacy and encryption
 
 ioNote has no account, server, or analytics. Optional **Encryption** is available in **Settings**. Use a passphrase of at least 12 characters and save a backup first; a forgotten passphrase cannot be recovered.

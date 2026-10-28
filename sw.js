@@ -1,10 +1,12 @@
-const CACHE = "ionote-v12";
+importScripts("./version.js");
+const CACHE = "ionote-v" + VERSION;
 const ASSETS = [
   "./",
   "./index.html",
   "./style.css",
   "./app.js",
   "./theme.js",
+  "./version.js",
   "./fonts/comfortaa.woff2",
   "./fonts/jbmono.woff2",
   "./manifest.webmanifest",

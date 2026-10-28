@@ -5,7 +5,6 @@ const STORE_KEY = "notes_v3_enc";
 const SETTINGS_KEY = "notes_settings_v3";
 const ITER = 600000;
 const CHECK = "ionote";
-const VERSION = "1.0";
 
 const $ = s => document.querySelector(s);
 const te = new TextEncoder();
@@ -63,6 +62,61 @@ async function decryptItems(items, key) {
   return out;
 }
 
+const toUrl = u8 => b64(u8).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const fromUrl = s => fromB64(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "="));
+
+async function zip(bytes) {
+  const s = new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+
+async function unzip(bytes, max = 1 << 20) {
+  const r = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw")).getReader();
+  const out = [];
+  let n = 0;
+  for (;;) {
+    const { done, value } = await r.read();
+    if (done) break;
+    n += value.length;
+    if (n > max) { r.cancel(); throw new Error("too big"); }
+    out.push(value);
+  }
+  return new Blob(out).text();
+}
+
+async function sealLink(n, pass) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(pass, salt);
+  const body = await zip(te.encode(JSON.stringify({ t: n.t, b: n.b })));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, body));
+  const out = new Uint8Array(29 + ct.length);
+  out[0] = 1;
+  out.set(salt, 1);
+  out.set(iv, 17);
+  out.set(ct, 29);
+  return location.origin + location.pathname + "#s=" + toUrl(out);
+}
+
+async function openLink(token, pass) {
+  const d = fromUrl(token);
+  if (d.length < 45 || d[0] !== 1) throw new Error("bad link");
+  const key = await deriveKey(pass, d.slice(1, 17));
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: d.slice(17, 29) }, key, d.slice(29));
+  const o = JSON.parse(await unzip(new Uint8Array(pt)));
+  if (!o || typeof o !== "object") throw new Error("bad note");
+  return o;
+}
+
+async function sendLink(url) {
+  if (navigator.share) {
+    try { await navigator.share({ url }); return; }
+    catch (e) { if (e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(url); toast("Link copied"); }
+  catch { prompt("Copy this link", url); }
+}
+
 /* ── Storage ── */
 function loadRaw(key, fallback) {
   try {
@@ -97,6 +151,26 @@ let lpX = 0;
 let lpY = 0;
 let deferredPrompt = null;
 let toastTimer = null;
+
+const DAY = 864e5;
+const MAX_BODY = 2100;
+let pendingShare = null;
+let pendingLink = null;
+let shareNote = null;
+
+function readUrl() {
+  const sp = new URLSearchParams(location.search);
+  const text = sp.get("text") || "";
+  const url = sp.get("url") || "";
+  const title = sp.get("title") || "";
+  const body = url && !text.includes(url) ? (text ? text + "\n" + url : url) : text;
+  const m = /^#s=([\w-]+)$/.exec(location.hash);
+  if (title || body) pendingShare = { t: title.slice(0, 200), b: body };
+  if (m && m[1].length < 100000) pendingLink = m[1];
+  if (title || body || m) history.replaceState(null, "", location.pathname);
+  return !!(pendingShare || pendingLink);
+}
+readUrl();
 
 const list = $("#list");
 const ed = $("#ed");
@@ -327,7 +401,9 @@ const LOCK_UI = {
   set: { t: "Encrypt notes", p: "Choose a passphrase of at least 12 characters. If you forget it, your notes cannot be recovered.", ok: "Encrypt", two: true, cancel: true, input: true },
   change: { t: "Change passphrase", p: "Choose a new passphrase of at least 12 characters. If you forget it, your notes cannot be recovered.", ok: "Change", two: true, cancel: true, input: true },
   import: { t: "Encrypted backup", p: "Enter the passphrase this backup was made with.", ok: "Import", two: false, cancel: true, input: true },
-  legacy: { t: "Old lock format", p: "These notes were locked with a PIN by an older version and can't be opened here. Erase them to start fresh.", ok: "Erase old notes", two: false, cancel: false, input: false }
+  legacy: { t: "Old lock format", p: "These notes were locked with a PIN by an older version and can't be opened here. Erase them to start fresh.", ok: "Erase old notes", two: false, cancel: false, input: false },
+  share: { t: "Share as link", p: "Choose a passphrase of at least 12 characters. Send it by a different route than the link.", ok: "Create link", two: true, cancel: true, input: true },
+  shared: { t: "Shared note", p: "Enter the passphrase that came with this link.", ok: "Open", two: false, cancel: true, input: true }
 };
 
 const BG = "#list,#dock,#add,#ed,#settings,#about,#sbar";
@@ -389,6 +465,7 @@ async function submitLock() {
       notes = (await loadNotes()) || [];
       hideLock();
       render();
+      afterLoad();
       return;
     }
     if (lockMode === "import") {
@@ -401,8 +478,28 @@ async function submitLock() {
       await mergeNotes(items);
       return;
     }
+    if (lockMode === "shared") {
+      let o;
+      try { o = await openLink(pendingLink, pass); } catch { return fail("Wrong passphrase, or the link is damaged."); }
+      const n = clean([o])[0];
+      if (!n) return fail("This link doesn't hold a note.");
+      pendingLink = null;
+      hideLock();
+      notes.unshift(n);
+      await persistNotes();
+      render();
+      openNote(n);
+      return;
+    }
     if (pass.length < 12) return fail("Use at least 12 characters. A few random words work well.");
     if (pass !== $("#lockPass2").value) return fail("The two passphrases differ. Retype the second one.", $("#lockPass2"));
+    if (lockMode === "share") {
+      const url = await sealLink(shareNote, pass);
+      shareNote = null;
+      hideLock();
+      await sendLink(url);
+      return;
+    }
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const key = await deriveKey(pass, salt);
     settings.salt = b64(salt);
@@ -431,6 +528,7 @@ async function lockApp() {
   notes = [];
   cur = null;
   importData = null;
+  shareNote = null;
   menuNote = null;
   $("#actions").classList.remove("show");
   q.value = "";
@@ -475,6 +573,31 @@ async function backupFile() {
     ? { app: "ionote", v: 1, enc: true, salt: settings.salt, iter: settings.iter, check: settings.check, items: loadRaw(STORE_KEY, { items: [] }).items }
     : { app: "ionote", v: 1, enc: false, items: notes.map(n => ({ id: n.id, t: n.t, b: n.b, d: n.d, pinned: !!n.pinned })) };
   return new File([JSON.stringify(out)], `ionote-backup-${new Date().toISOString().slice(0, 10)}.json`, { type: "application/json" });
+}
+
+function applyShare() {
+  const n = { id: uid(), t: pendingShare.t, b: pendingShare.b, d: Date.now(), pinned: false };
+  pendingShare = null;
+  notes.unshift(n);
+  persistNotes();
+  render();
+  openNote(n);
+}
+
+function backupNudge() {
+  if (!notes.length) return;
+  const now = Date.now();
+  const last = settings.lastBackup || Math.min(...notes.map(n => n.d));
+  if (now - last < 14 * DAY || now - (settings.nudgedAt || 0) < 3 * DAY) return;
+  settings.nudgedAt = now;
+  saveRaw(SETTINGS_KEY, settings);
+  toast("Back up your notes? They only live in this browser.", "Back up", exportBackup);
+}
+
+function afterLoad() {
+  if (pendingShare) applyShare();
+  else if (pendingLink) showLock("shared");
+  else backupNudge();
 }
 
 /* ── Install ── */
@@ -634,10 +757,10 @@ $("#btnChangePass").onclick = () => showLock("change");
 $("#selAuto").onchange = e => { settings.autoLock = Number(e.target.value); saveRaw(SETTINGS_KEY, settings); };
 
 $("#lockOk").onclick = submitLock;
-$("#lockCancel").onclick = () => { importData = null; hideLock(); };
+$("#lockCancel").onclick = () => { importData = null; shareNote = null; pendingLink = null; hideLock(); };
 $("#lock").addEventListener("keydown", e => { if (e.key === "Enter") submitLock(); });
 
-$("#btnExport").onclick = async () => {
+async function exportBackup() {
   const f = await backupFile();
   const a = document.createElement("a");
   a.href = URL.createObjectURL(f);
@@ -648,7 +771,22 @@ $("#btnExport").onclick = async () => {
   saveRaw(SETTINGS_KEY, settings);
   refreshBackupInfo();
   toast("Backup saved");
+}
+$("#btnExport").onclick = exportBackup;
+
+$("#btnShare").onclick = async () => {
+  const n = cur;
+  if (!n || !(n.t.trim() || n.b.trim())) return toast("Write something first");
+  if (typeof CompressionStream === "undefined") return toast("This browser can't make share links");
+  const size = (await zip(te.encode(JSON.stringify({ t: n.t, b: n.b })))).length;
+  if (size > MAX_BODY) return toast("Too long for a link. Use Save backup instead.");
+  shareNote = n;
+  showLock("share");
 };
+
+addEventListener("hashchange", () => {
+  if (readUrl() && (!settings.lockEnabled || cryptoKey)) afterLoad();
+});
 
 $("#btnImport").onclick = () => { holdLock = Date.now() + 120000; $("#importFile").click(); };
 $("#importFile").onchange = e => {
@@ -735,5 +873,6 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catc
   }
   notes = (await loadNotes()) || [];
   render();
+  afterLoad();
 })();
 })();

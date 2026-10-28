@@ -39,6 +39,7 @@
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></symbol>
   <symbol id="i-note" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4"/></symbol>
   <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3M8 7l4-4 4 4M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></symbol>
 </svg>
 
 <noscript><p class="noscript">ioNote needs JavaScript to run. Please turn it on and reload the page.</p></noscript>
@@ -72,6 +73,7 @@
     <div class="pbar">
       <button class="ib" id="back" aria-label="Back"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-back"/></svg></button>
       <span class="stamp" id="stamp"></span>
+      <button class="ib" id="btnShare" aria-label="Share as link"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-share"/></svg></button>
       <button class="ib" id="btnPin" aria-label="Pin" aria-pressed="false"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-pin"/></svg></button>
       <button class="ib" id="btnDel" aria-label="Delete"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-trash"/></svg></button>
     </div>
@@ -178,6 +180,7 @@
 
 <div id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastAct" hidden></button></div>
 
+<script src="version.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
