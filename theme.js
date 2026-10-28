@@ -1,0 +1,1 @@
+try{var s=JSON.parse(localStorage.getItem("notes_settings_v3")||"{}");var d=s.theme==="dark"||(s.theme!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light";document.getElementById("metaTheme").content=d?"#101110":"#FDFDFD"}catch(e){}
